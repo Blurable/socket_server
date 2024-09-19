@@ -33,6 +33,7 @@ class ClientHandler:
     def __init__(self, client: Connection, clients: ThreadSafeDict):
         self.client = client
         self.clients = clients
+        self.username = ''
     
     
     def run(self):
@@ -54,7 +55,7 @@ class ClientHandler:
             payload = self.client.recv(hdr.msg_len)
             if len(payload) != hdr.msg_len:
                 raise ValueError
-            if not self.client.username and hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNECT:
+            if not self.username and hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNECT:
                 break
             match hdr.msg_type:
                 case protocol.MSG_TYPE.CHAT_CONNECT:
@@ -80,7 +81,7 @@ class ClientHandler:
     
     def handle_connect(self, pkt: protocol.chat_connect):
         reply = protocol.chat_connack()
-
+        
         if pkt.protocol_version != protocol.SERVER_CONFIG.CURRENT_VERSION:
             reply.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION
             self.client.send(reply.pack())
@@ -90,7 +91,7 @@ class ClientHandler:
             if self.clients.add_if_not_exists(pkt.username, self.client):
                 print(f"[*]{pkt.username} has connected to the server")
                 reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED
-                self.client.username = pkt.username
+                self.username = pkt.username
                 self.client.send(reply.pack())
                 return
         
@@ -115,7 +116,7 @@ class ClientHandler:
             if fail:
                 fail_pkt = protocol.chat_msg()
                 fail_pkt.src = protocol.SERVER_CONFIG.SERVER_NAME
-                fail_pkt.dst = self.client.username
+                fail_pkt.dst = self.username
                 fail_pkt.msg = f"{pkt.dst} is offline"
                 self.client.send(fail_pkt.pack())
         else:
@@ -127,7 +128,7 @@ class ClientHandler:
             case pkt.COMM_TYPE.COMM_MEMBERS:
                 reply = protocol.chat_msg()
                 reply.src = protocol.SERVER_CONFIG.SERVER_NAME
-                reply.dst = self.client.username
+                reply.dst = self.username
                 reply.msg = '\n'.join(self.clients.copy_keys())
                 self.client.send(reply.pack())
             case _:
@@ -149,11 +150,11 @@ class ClientHandler:
 
     def shutdown(self):
         self.client.close()
-        if self.client.username:
-            del self.clients[self.client.username]
+        if self.username:
+            del self.clients[self.username] 
 
             pkt = protocol.chat_msg()
             pkt.src = protocol.SERVER_CONFIG.SERVER_NAME
             pkt.dst = ""
-            pkt.msg = f"{self.client.username} disconnected"
+            pkt.msg = f"{self.username} disconnected"
             self.broadcast(pkt.pack())
