@@ -7,6 +7,7 @@ import threading
 
 login_barrier = threading.Barrier(2)
 msg_barrier = threading.Barrier(3)
+msg = ''
 
 def client_connection(username):
     global msg

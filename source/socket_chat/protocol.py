@@ -46,6 +46,7 @@ class chat_header:
         self.msg_len = 0
 
     def pack(self) -> bytes:
+        assert self.msg_len <= bytes_limit(self.PKT_LEN_FIELD_SIZE)
         assert MSG_TYPE.CHAT_NULL < self.msg_type < MSG_TYPE.CHAT_MAX
 
         return self.msg_type.to_bytes(self.PKT_TYPE_FIELD_SIZE, "little") + \

@@ -20,7 +20,9 @@ import socket_chat.protocol as protocol
     ('!asd', False),
     ('ArTyOm1234567890', True),
     ('a', True),
-    ('1', False)
+    ('123_asd', False),
+    ('_123asd', True),
+    ('asd_123', True)
 
 ])
 def test_client_usernames(username, flag_status):
