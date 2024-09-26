@@ -10,6 +10,7 @@ import time
 
 
 usernames_list = ['Artyom', 'Baho', 'Poteha', 'Vlados', 'Diman']
+wait_event = threading.Event()
 creation_queue = Queue()
 leave_queue = Queue()
 clients = ThreadSafeDict()
@@ -23,12 +24,7 @@ def start_client(username):
     pkt = protocol.chat_connect()
     pkt.username = username
     conn.send(pkt.pack())
-    while True:
-        try:
-            conn.recv(1)
-        except:
-            pass
-    
+    wait_event.wait()
     
 
 def test_client_usernames(start_server):

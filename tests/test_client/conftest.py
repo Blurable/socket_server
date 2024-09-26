@@ -7,6 +7,10 @@ import threading
 
 
 @pytest.fixture(scope='session', autouse=True)
+def server():
+    threading.Thread(target=start_server, args=(54321,), daemon=True).start()
+
+
 def start_server(host_port, host_ip = socket.gethostbyname(socket.gethostname())):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -26,4 +30,4 @@ def start_server(host_port, host_ip = socket.gethostbyname(socket.gethostname())
             threading.Thread(target=handler.run, daemon=True).start()
         except Exception as e:
             print(f'[-]Error while accepting the client: {e}')
-            client_socket.close()
+            client_socket.close() 
