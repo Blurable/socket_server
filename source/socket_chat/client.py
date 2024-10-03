@@ -15,8 +15,6 @@ class Client:
         self.stop_event = threading.Event()
         self.chat_members = []
 
-        self.connect_to_server()
-
 
     def connect_to_server(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -66,7 +64,7 @@ class Client:
                         self.username = username
                         break
                     elif pkt.conn_type == protocol.chat_connack.CONN_TYPE.CONN_RETRY:
-                        print("[*]Username is not valid or already taken, try again")
+                        print("[*]Username is already taken, try again")
                     elif pkt.conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION:
                         print("[*]Protocol version is out of date.")
                         raise ValueError
@@ -76,11 +74,10 @@ class Client:
                 else:
                     print("[-]Wrong msg type during authorize")
                     raise ValueError
-    
+            else:
+                print("[*]Username is not valid, try again")    
 
-    def handle(self):
-        hdr, payload = self.recv_pkt()
-
+    def handle(self, hdr, payload):
         match hdr.msg_type:
             case protocol.MSG_TYPE.CHAT_MSG:
                 pkt = protocol.chat_msg()
@@ -138,7 +135,8 @@ class Client:
     def receiver(self):
         try:
             while not self.stop_event.is_set():
-                self.handle()
+                hdr, payload = self.recv_pkt()
+                self.handle(hdr, payload)
         except Exception as e:
             print(f'[-]Error in receiver: {e}')
         finally:
@@ -148,4 +146,5 @@ class Client:
 
 if __name__ == "__main__":
     chat_server = Client(54321)
+    chat_server.connect_to_server()
     input()

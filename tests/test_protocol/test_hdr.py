@@ -10,11 +10,11 @@ def hdr():
 
 def test_failure_pack(hdr):
     with pytest.raises(AssertionError):
-        assert hdr.pack()
+        hdr.pack()
 
     with pytest.raises(AssertionError):
         hdr.msg_len = 65536
-        assert hdr.pack()
+        hdr.pack()
 
 
 def test_pack(hdr):
