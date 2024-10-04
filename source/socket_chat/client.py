@@ -120,7 +120,7 @@ class Client:
                         self.server.send(pkt.pack())
                     case '/all':
                         self.cur_channel = ""
-                    case _ if re.fullmatch(r'/[a-zA-Z]+', msg):
+                    case _ if re.fullmatch(r'^/[a-zA-Z_][a-zA-Z0-9_]*$', msg):
                         self.cur_channel = msg[1:]
                     case _:
                         pkt = protocol.chat_msg()
