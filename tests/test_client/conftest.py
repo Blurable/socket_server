@@ -1,33 +1,39 @@
 import pytest
 import socket
-from socket_chat.tsdict import ThreadSafeDict
-from socket_chat.server import ClientHandler
+from unittest.mock import patch, MagicMock
+from socket_chat.client import Client
 from socket_chat.connection import Connection
+from queue import Queue
 import threading
 
 
-@pytest.fixture(scope='session', autouse=True)
-def server():
-    threading.Thread(target=start_server, args=(54321,), daemon=True).start()
+@pytest.fixture
+def mock_client():
+    buffer_queue = Queue()
+    input_queue = Queue()
 
+    mock_socket = MagicMock()
 
-def start_server(host_port, host_ip = socket.gethostbyname(socket.gethostname())):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        server_socket.bind((host_ip, host_port))
-        server_socket.listen()
-        print('[*]Server is listening...\n')
-    except Exception as e:
-        print(f'[-]Error while starting the server: {e}')
-        server_socket.close()
+    buffer = b''
+    def recv_side_effect(bufsize):
+        nonlocal buffer_queue
+        nonlocal buffer
+        if not bufsize and buffer_queue.empty():
+            raise ValueError
+        if not bufsize:
+            return b''
+        if not buffer:
+            buffer = buffer_queue.get()
 
-    clients = ThreadSafeDict()
-    while True:
-        try:
-            client_socket, client_addr = server_socket.accept()
-            print(f"[*]Accepted connection from {client_addr[0]}:{client_addr[1]}")
-            handler = ClientHandler(Connection(client_socket), clients)
-            threading.Thread(target=handler.run, daemon=True).start()
-        except Exception as e:
-            print(f'[-]Error while accepting the client: {e}')
-            client_socket.close() 
+        chunk = buffer[ : bufsize]
+        buffer = buffer[bufsize : ]
+        return chunk    
+
+    mock_socket.recv.side_effect = recv_side_effect
+    
+    with patch('socket.socket', return_value=mock_socket):
+        client = Client(server_port=54321)
+        client.server = mock_socket
+
+        with patch('builtins.input', side_effect=lambda prompt: input_queue.get()):
+            yield client, buffer_queue, input_queue

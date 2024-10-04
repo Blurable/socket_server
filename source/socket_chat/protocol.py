@@ -46,8 +46,9 @@ class chat_header:
         self.msg_len = 0
 
     def pack(self) -> bytes:
-        assert self.msg_len <= bytes_limit(self.PKT_LEN_FIELD_SIZE)
-        assert MSG_TYPE.CHAT_NULL < self.msg_type < MSG_TYPE.CHAT_MAX
+        if self.msg_len > bytes_limit(self.PKT_LEN_FIELD_SIZE) or \
+           MSG_TYPE.CHAT_NULL >= self.msg_type >= MSG_TYPE.CHAT_MAX:
+            raise ValueError
 
         return self.msg_type.to_bytes(self.PKT_TYPE_FIELD_SIZE, "little") + \
                self.msg_len.to_bytes(self.PKT_LEN_FIELD_SIZE, "little")
@@ -77,8 +78,9 @@ class chat_connect:
         
 
     def pack(self) -> bytes:
-        assert len(self.username) <= bytes_limit(self.USERNAME_LEN_FIELD_SIZE)
-        assert len(self.protocol_version) <= bytes_limit(self.PROTOCOL_VERSION_LEN_FIELD_SIZE)
+        if len(self.username) > bytes_limit(self.USERNAME_LEN_FIELD_SIZE) or \
+           len(self.protocol_version) > bytes_limit(self.PROTOCOL_VERSION_LEN_FIELD_SIZE):
+            raise ValueError
         
         self.hdr.msg_len = len(self.protocol_version) + self.PROTOCOL_VERSION_LEN_FIELD_SIZE + len(self.username) + self.USERNAME_LEN_FIELD_SIZE
         return self.hdr.pack() + len(self.protocol_version).to_bytes(self.PROTOCOL_VERSION_LEN_FIELD_SIZE, "little") + self.protocol_version.encode() + \
@@ -112,7 +114,8 @@ class chat_connack:
         self.conn_type = self.CONN_TYPE.CONN_NULL
 
     def pack(self) -> bytes:
-        assert self.CONN_TYPE.CONN_NULL < self.conn_type < self.CONN_TYPE.CONN_MAX
+        if self.CONN_TYPE.CONN_NULL >= self.conn_type >= self.CONN_TYPE.CONN_MAX:
+            raise ValueError
 
         self.hdr.msg_len = self.CONN_TYPE_FIELD_SIZE
         return self.hdr.pack() + self.conn_type.to_bytes(self.CONN_TYPE_FIELD_SIZE, "little")
@@ -133,9 +136,10 @@ class chat_msg:
         self.dst = ""
 
     def pack(self) -> bytes:
-        assert len(self.src) <= bytes_limit(self.SRC_LEN_FIELD_SIZE)
-        assert len(self.dst) <= bytes_limit(self.DST_LEN_FIELD_SIZE)
-        assert len(self.msg) <= bytes_limit(self.MSG_LEN_FIELD_SIZE)
+        if  len(self.src) > bytes_limit(self.SRC_LEN_FIELD_SIZE) or \
+            len(self.dst) > bytes_limit(self.DST_LEN_FIELD_SIZE) or \
+            len(self.msg) > bytes_limit(self.MSG_LEN_FIELD_SIZE):
+            raise ValueError
         
         self.hdr.msg_len = self.SRC_LEN_FIELD_SIZE + len(self.src) + \
                            self.DST_LEN_FIELD_SIZE + len(self.dst) + \
@@ -198,7 +202,8 @@ class chat_command:
         self.comm_type = self.COMM_TYPE.COMM_NULL
 
     def pack(self) -> bytes:
-        assert self.COMM_TYPE.COMM_NULL < self.comm_type < self.COMM_TYPE.COMM_MAX
+        if self.COMM_TYPE.COMM_NULL >= self.comm_type >= self.COMM_TYPE.COMM_MAX:
+            raise ValueError
 
         self.hdr.msg_len = self.COMMAND_TYPE_FIELD_SIZE
         return self.hdr.pack() + self.comm_type.to_bytes(self.COMMAND_TYPE_FIELD_SIZE, "little")

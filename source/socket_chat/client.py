@@ -42,8 +42,10 @@ class Client:
                                              protocol.chat_header.PKT_LEN_FIELD_SIZE)
         hdr = protocol.chat_header()
         hdr.unpack(hdr_bytes)
-
-        payload = self.server.recv(hdr.msg_len)
+        if hdr.msg_len:
+            payload = self.server.recv(hdr.msg_len)
+        else:
+            payload = b''
         if len(payload) != hdr.msg_len:
             raise ValueError
         return (hdr, payload)
@@ -85,6 +87,7 @@ class Client:
                 self.handle_msg(pkt)
             case _:
                 print(f"[-]Unexpected type {hdr.msg_type}")
+                raise ValueError
 
 
     def handle_msg(self, pkt: protocol.chat_msg):
