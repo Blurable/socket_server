@@ -150,4 +150,3 @@ class Client:
 if __name__ == "__main__":
     chat_server = Client(54321)
     chat_server.connect_to_server()
-    input()

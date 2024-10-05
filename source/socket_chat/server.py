@@ -38,45 +38,52 @@ class ClientHandler:
     
     def run(self):
         try:
-            self.main_loop()
+            while True:
+                if not self.main_handler():
+                    break
         except Exception as e:
             print(f'[-]Error: {e}')
         finally:
             self.shutdown()
 
-    
-    def main_loop(self):
-        while True:
-            hdr_bytes = self.client.recv(protocol.chat_header.PKT_TYPE_FIELD_SIZE + 
-                                         protocol.chat_header.PKT_LEN_FIELD_SIZE)
-            hdr = protocol.chat_header()
-            hdr.unpack(hdr_bytes)
 
-            payload = self.client.recv(hdr.msg_len)
-            if len(payload) != hdr.msg_len:
-                raise ValueError
-            if not self.username and hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNECT:
-                break
-            match hdr.msg_type:
-                case protocol.MSG_TYPE.CHAT_CONNECT:
-                    pkt = protocol.chat_connect()
-                    pkt.unpack(payload)
-                    self.handle_connect(pkt)
-                case protocol.MSG_TYPE.CHAT_MSG:
-                    pkt = protocol.chat_msg()
-                    pkt.unpack(payload)
-                    self.handle_msg(pkt)
-                case protocol.MSG_TYPE.CHAT_DISCONNECT:
-                    self.shutdown()
-                    break
-                case protocol.MSG_TYPE.CHAT_COMMAND:
-                    pkt = protocol.chat_command()
-                    pkt.unpack(payload)
-                    self.handle_command(pkt)
-                case _:
-                    print(f"[-]Unexpected type {hdr.msg_type}")
-                    self.shutdown()
-                    break
+    def recv_pkt(self):
+        hdr_bytes = self.client.recv(protocol.chat_header.PKT_TYPE_FIELD_SIZE + 
+                                     protocol.chat_header.PKT_LEN_FIELD_SIZE)
+        hdr = protocol.chat_header()
+        hdr.unpack(hdr_bytes)
+
+        payload = self.client.recv(hdr.msg_len)
+        if len(payload) != hdr.msg_len:
+            raise ValueError
+        return hdr, payload
+    
+
+    def main_handler(self):
+        hdr, payload = self.recv_pkt()
+        if not self.username and hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNECT:
+            raise ValueError('Invalid packets on unauthorized user')
+        match hdr.msg_type:
+            case protocol.MSG_TYPE.CHAT_CONNECT:
+                pkt = protocol.chat_connect()
+                pkt.unpack(payload)
+                self.handle_connect(pkt)
+            case protocol.MSG_TYPE.CHAT_MSG:
+                pkt = protocol.chat_msg()
+                pkt.unpack(payload)
+                self.handle_msg(pkt)
+            case protocol.MSG_TYPE.CHAT_DISCONNECT:
+                self.shutdown()
+                return False
+            case protocol.MSG_TYPE.CHAT_COMMAND:
+                pkt = protocol.chat_command()
+                pkt.unpack(payload)
+                self.handle_command(pkt)
+            case _:
+                print(f"[-]Unexpected type {hdr.msg_type}")
+                self.shutdown()
+                return False
+        return True
 
     
     def handle_connect(self, pkt: protocol.chat_connect):
