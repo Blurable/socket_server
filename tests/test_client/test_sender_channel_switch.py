@@ -8,11 +8,20 @@ def get_test_data():
             (' /asd', ''), ('', ''), (' ', ''), ('/1asd_', ''), ('/asd', 'asd'), ('/_123', '_123'), ('/_', '_'), ('/_1a', '_1a'), ('/A_a_A_a_A', 'A_a_A_a_A')]
 
 
-@pytest.mark.parametrize('send, cur_channel', get_test_data())
-def test_sender_channel_no_switch(mock_client, send, cur_channel):
-    client, _, input_queue = mock_client
+@pytest.mark.parametrize('input, cur_channel', get_test_data())
+def test_sender_channel_switch(mock_client, input, cur_channel):
+    client, _, input_queue, _ = mock_client
     assert client.cur_channel == ''
-    input_queue.put(send)
+    input_queue.put(input)
     threading.Thread(target=client.sender, daemon=True).start()
     client.stop_event.is_set()
     assert client.cur_channel == cur_channel
+
+
+def test_sender_channel_all_switch(mock_client):
+    client, _, input_queue, _ = mock_client
+    client.cur_channel = 'Artyom'
+    input_queue.put('/all')
+    threading.Thread(target=client.sender, daemon = True).start()
+    client.stop_event.is_set()
+    assert client.cur_channel == ''

@@ -3,7 +3,7 @@ import socket_chat.protocol as protocol
 
 
 def test_authorization_retry(mock_client):
-    client, recv_queue, input_queue = mock_client
+    client, recv_queue, input_queue, send_queue = mock_client
 
     input_queue.put('Baho')
     pkt1 = protocol.chat_connack()
@@ -16,5 +16,11 @@ def test_authorization_retry(mock_client):
     recv_queue.put(pkt2.pack())
     
     client.authorize()
+
+    connect = protocol.chat_connect()
+    connect.username = 'Baho'
+    assert send_queue.get() == connect.pack()
+    connect.username = 'Artyom'
+    assert send_queue.get() == connect.pack()
 
     assert client.username == 'Artyom'

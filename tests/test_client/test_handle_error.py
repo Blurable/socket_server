@@ -19,7 +19,7 @@ def get_test_data():
 
 @pytest.mark.parametrize('recv', get_test_data())
 def test_handle_error(mock_client, recv):
-    client, recv_queue, _ = mock_client
+    client, recv_queue, _, _ = mock_client
     
     pkt = protocol.chat_connack()
     pkt.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED

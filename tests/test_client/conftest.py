@@ -1,16 +1,15 @@
 import pytest
-import socket
 from unittest.mock import patch, MagicMock
 from socket_chat.client import Client
-from socket_chat.connection import Connection
 from queue import Queue
-import threading
+
 
 
 @pytest.fixture
 def mock_client():
     buffer_queue = Queue()
     input_queue = Queue()
+    send_queue = Queue()
 
     mock_socket = MagicMock()
 
@@ -29,11 +28,15 @@ def mock_client():
         buffer = buffer[bufsize : ]
         return chunk    
 
-    mock_socket.recv.side_effect = recv_side_effect
+    def mock_sendall(data):
+        nonlocal send_queue
+        return send_queue.put(data)
     
-    with patch('socket.socket', return_value=mock_socket):
+    mock_socket.recv.side_effect = recv_side_effect
+    mock_socket.send.side_effect = mock_sendall   
+    with patch('socket.socket', return_value=mock_socket), \
+         patch('builtins.input', side_effect=lambda prompt: input_queue.get()):
         client = Client(server_port=54321)
         client.server = mock_socket
 
-        with patch('builtins.input', side_effect=lambda prompt: input_queue.get()):
-            yield client, buffer_queue, input_queue
+        yield client, buffer_queue, input_queue, send_queue

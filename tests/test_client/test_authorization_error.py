@@ -20,7 +20,7 @@ def get_test_data():
 
 @pytest.mark.parametrize('recv', get_test_data())
 def test_authorization_error(mock_client, recv):
-    client, recv_queue, input_queue = mock_client
+    client, recv_queue, input_queue, _ = mock_client
 
     input_queue.put('Baho')
     recv_queue.put(recv)

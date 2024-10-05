@@ -1,17 +1,41 @@
 import pytest
 import socket
+from unittest.mock import patch, MagicMock
+from socket_chat.client import Client
+from socket_chat.connection import Connection
+from queue import Queue
+import threading
 
 
-@pytest.fixture(scope='session', autouse=True)
-def start_server(host_ip = socket.gethostbyname(socket.gethostname())):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        server_socket.bind((host_ip, 54321))
-        server_socket.listen()
-        print('[*]Server is listening...\n')
-    except Exception as e:
-        print(f'[-]Error while starting the server: {e}')
-        server_socket.close()
-    return server_socket
+@pytest.fixture
+def mock_server():
+    buffer_queue = Queue()
+    input_queue = Queue()
+
+    mock_socket = MagicMock()
+
+    buffer = b''
+    def recv_side_effect(bufsize):
+        nonlocal buffer_queue
+        nonlocal buffer
+        if not bufsize and buffer_queue.empty():
+            raise ValueError
+        if not bufsize:
+            return b''
+        if not buffer:
+            buffer = buffer_queue.get()
+
+        chunk = buffer[ : bufsize]
+        buffer = buffer[bufsize : ]
+        return chunk    
+
+    mock_socket.recv.side_effect = recv_side_effect
+    
+    with patch('socket.socket', return_value=mock_socket):
+        client = Client(server_port=54321)
+        client.server = mock_socket
+
+        with patch('builtins.input', side_effect=lambda prompt: input_queue.get()):
+            yield client, buffer_queue, input_queue
     
 
