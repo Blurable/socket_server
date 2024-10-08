@@ -53,7 +53,10 @@ class ClientHandler:
         hdr = protocol.chat_header()
         hdr.unpack(hdr_bytes)
 
-        payload = self.client.recv(hdr.msg_len)
+        if hdr.msg_len:
+            payload = self.client.recv(hdr.msg_len)
+        else:
+            payload = b''
         if len(payload) != hdr.msg_len:
             raise ValueError
         return hdr, payload
@@ -136,7 +139,12 @@ class ClientHandler:
                 reply = protocol.chat_msg()
                 reply.src = protocol.SERVER_CONFIG.SERVER_NAME
                 reply.dst = self.username
-                reply.msg = '\n'.join(self.clients.copy_keys())
+                clients = self.clients.copy_keys()
+                clients.remove(self.username)
+                if not clients:
+                    reply.msg = "You are alone in the chat"
+                else:
+                    reply.msg = '\n'.join(self.clients.copy_keys())
                 self.client.send(reply.pack())
             case _:
                 print(f"[-]Unexpected type {pkt.comm_type}")

@@ -34,8 +34,7 @@ def mock_client():
     
     mock_socket.recv.side_effect = recv_side_effect
     mock_socket.send.side_effect = mock_sendall   
-    with patch('socket.socket', return_value=mock_socket), \
-         patch('builtins.input', side_effect=lambda prompt: input_queue.get()):
+    with patch('builtins.input', side_effect=lambda prompt: input_queue.get()):
         client = Client(server_port=54321)
         client.server = mock_socket
 
