@@ -1,12 +1,4 @@
-class AutoNumberMeta(type):
-    def __new__(cls, name, bases, attrs):
-        constants = {k : v for k, v in attrs.items() if not k.startswith('__')}
-        for i, key in enumerate(constants):
-            attrs[key] = i
-        return super().__new__(cls, name, bases, attrs)
-    
-class AutoNumber(metaclass=AutoNumberMeta):
-    pass
+from enum import Enum, auto
 
 
 def bytes_limit(bytes_num):
@@ -26,28 +18,28 @@ class SERVER_CONFIG:
     RESTRICTED_USERNAMES = list(KEYWORDS.keys()) + [SERVER_NAME]
 
 
-class MSG_TYPE(AutoNumber):
-    CHAT_NULL = None
-    CHAT_PROTOCOL_VERIFICATION = None
-    CHAT_CONNECT = None
-    CHAT_CONNACK = None
-    CHAT_MSG = None
-    CHAT_DISCONNECT = None
-    CHAT_COMMAND = None
-    CHAT_MAX = None
+class MSG_TYPE(Enum):
+    CHAT_NULL = auto()
+    CHAT_PROTOCOL_VERIFICATION = auto()
+    CHAT_CONNECT = auto()
+    CHAT_CONNACK = auto()
+    CHAT_MSG = auto()
+    CHAT_DISCONNECT = auto()
+    CHAT_COMMAND = auto()
+    CHAT_MAX = auto()
 
 
 class chat_header:
     PKT_TYPE_FIELD_SIZE = 1
     PKT_LEN_FIELD_SIZE = 2
 
-    def __init__(self, msg_type=MSG_TYPE.CHAT_NULL):
+    def __init__(self, msg_type=MSG_TYPE.CHAT_NULL.value):
         self.msg_type = msg_type
         self.msg_len = 0
 
     def pack(self) -> bytes:
         if self.msg_len > bytes_limit(self.PKT_LEN_FIELD_SIZE) or \
-           MSG_TYPE.CHAT_NULL >= self.msg_type >= MSG_TYPE.CHAT_MAX:
+           not MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value:
             raise ValueError
 
         return self.msg_type.to_bytes(self.PKT_TYPE_FIELD_SIZE, "little") + \
@@ -65,7 +57,7 @@ class chat_connect:
     USERNAME_LEN_FIELD_SIZE = 1
 
     def __init__(self):
-        self.hdr = chat_header(MSG_TYPE.CHAT_CONNECT)
+        self.hdr = chat_header(MSG_TYPE.CHAT_CONNECT.value)
         self.protocol_version = SERVER_CONFIG.CURRENT_VERSION
         self.username = ""
 
@@ -102,19 +94,19 @@ class chat_connect:
 
 class chat_connack:
     CONN_TYPE_FIELD_SIZE = 1
-    class CONN_TYPE(AutoNumber):
-        CONN_NULL = None       
-        WRONG_PROTOCOL_VERSION = None
-        CONN_RETRY = None
-        CONN_ACCEPTED = None
-        CONN_MAX = None
+    class CONN_TYPE(Enum):
+        CONN_NULL = auto()       
+        WRONG_PROTOCOL_VERSION = auto()
+        CONN_RETRY = auto()
+        CONN_ACCEPTED = auto()
+        CONN_MAX = auto()
 
     def __init__(self):
-        self.hdr = chat_header(MSG_TYPE.CHAT_CONNACK)
-        self.conn_type = self.CONN_TYPE.CONN_NULL
+        self.hdr = chat_header(MSG_TYPE.CHAT_CONNACK.value)
+        self.conn_type = self.CONN_TYPE.CONN_NULL.value
 
     def pack(self) -> bytes:
-        if self.CONN_TYPE.CONN_NULL >= self.conn_type >= self.CONN_TYPE.CONN_MAX:
+        if not self.CONN_TYPE.CONN_NULL.value < self.conn_type < self.CONN_TYPE.CONN_MAX.value:
             raise ValueError
 
         self.hdr.msg_len = self.CONN_TYPE_FIELD_SIZE
@@ -130,7 +122,7 @@ class chat_msg:
     MSG_LEN_FIELD_SIZE = 2
 
     def __init__(self):
-        self.hdr = chat_header(MSG_TYPE.CHAT_MSG)
+        self.hdr = chat_header(MSG_TYPE.CHAT_MSG.value)
         self.msg = ""
         self.src = ""
         self.dst = ""
@@ -192,17 +184,17 @@ class chat_msg:
 class chat_command:
     COMMAND_TYPE_FIELD_SIZE = 1
 
-    class COMM_TYPE(AutoNumber):
-        COMM_NULL = None
-        COMM_MEMBERS = None
-        COMM_MAX = None
+    class COMM_TYPE(Enum):
+        COMM_NULL = auto()
+        COMM_MEMBERS = auto()
+        COMM_MAX = auto()
 
     def __init__(self):
-        self.hdr = chat_header(MSG_TYPE.CHAT_COMMAND)
-        self.comm_type = self.COMM_TYPE.COMM_NULL
+        self.hdr = chat_header(MSG_TYPE.CHAT_COMMAND.value)
+        self.comm_type = self.COMM_TYPE.COMM_NULL.value
 
     def pack(self) -> bytes:
-        if self.COMM_TYPE.COMM_NULL >= self.comm_type >= self.COMM_TYPE.COMM_MAX:
+        if not self.COMM_TYPE.COMM_NULL.value < self.comm_type < self.COMM_TYPE.COMM_MAX.value:
             raise ValueError
 
         self.hdr.msg_len = self.COMMAND_TYPE_FIELD_SIZE
@@ -215,7 +207,7 @@ class chat_command:
 
 class chat_disconnect:
     def __init__(self):
-        self.hdr = chat_header(MSG_TYPE.CHAT_DISCONNECT)
+        self.hdr = chat_header(MSG_TYPE.CHAT_DISCONNECT.value)
 
     def pack(self) -> bytes:
         return self.hdr.pack()

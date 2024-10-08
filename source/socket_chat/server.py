@@ -64,21 +64,21 @@ class ClientHandler:
 
     def main_handler(self):
         hdr, payload = self.recv_pkt()
-        if not self.username and hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNECT:
+        if not self.username and hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNECT.value:
             raise ValueError('Invalid packets on unauthorized user')
         match hdr.msg_type:
-            case protocol.MSG_TYPE.CHAT_CONNECT:
+            case protocol.MSG_TYPE.CHAT_CONNECT.value:
                 pkt = protocol.chat_connect()
                 pkt.unpack(payload)
                 self.handle_connect(pkt)
-            case protocol.MSG_TYPE.CHAT_MSG:
+            case protocol.MSG_TYPE.CHAT_MSG.value:
                 pkt = protocol.chat_msg()
                 pkt.unpack(payload)
                 self.handle_msg(pkt)
-            case protocol.MSG_TYPE.CHAT_DISCONNECT:
+            case protocol.MSG_TYPE.CHAT_DISCONNECT.value:
                 self.shutdown()
                 return False
-            case protocol.MSG_TYPE.CHAT_COMMAND:
+            case protocol.MSG_TYPE.CHAT_COMMAND.value:
                 pkt = protocol.chat_command()
                 pkt.unpack(payload)
                 self.handle_command(pkt)
@@ -93,19 +93,19 @@ class ClientHandler:
         reply = protocol.chat_connack()
         
         if pkt.protocol_version != protocol.SERVER_CONFIG.CURRENT_VERSION:
-            reply.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION
+            reply.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value
             self.client.send(reply.pack())
             return
 
         if pkt.username_validation(pkt.username):
             if self.clients.add_if_not_exists(pkt.username, self.client):
                 print(f"[*]{pkt.username} has connected to the server")
-                reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED
+                reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value
                 self.username = pkt.username
                 self.client.send(reply.pack())
                 return
         
-        reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY
+        reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY.value
         self.client.send(reply.pack())
 
 
@@ -135,7 +135,7 @@ class ClientHandler:
 
     def handle_command(self, pkt: protocol.chat_command):
         match pkt.comm_type:
-            case pkt.COMM_TYPE.COMM_MEMBERS:
+            case pkt.COMM_TYPE.COMM_MEMBERS.value:
                 reply = protocol.chat_msg()
                 reply.src = protocol.SERVER_CONFIG.SERVER_NAME
                 reply.dst = self.username

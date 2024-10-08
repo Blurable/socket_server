@@ -1,5 +1,7 @@
 import pytest
 import socket_chat.protocol as protocol
+import random
+
 
 @pytest.fixture()
 def hdr():
@@ -7,27 +9,26 @@ def hdr():
     return hdr
 
 
-
-def test_failure_pack(hdr):
-    with pytest.raises(AssertionError):
+@pytest.mark.parametrize('hdr_len, msg_type', [(0, 1), (65536, 1), (1, protocol.MSG_TYPE.CHAT_NULL.value), (1, protocol.MSG_TYPE.CHAT_MAX.value)])
+def test_failure_pack(hdr, hdr_len, msg_type):
+    with pytest.raises(ValueError):
+        hdr.msg_len = hdr_len
+        hdr.msg_type = msg_type
         hdr.pack()
 
-    with pytest.raises(AssertionError):
-        hdr.msg_len = 65536
-        hdr.pack()
 
+def get_test_msg_types():
+    return [(msg_type.value) for msg_type in list(protocol.MSG_TYPE)][1:-1]
 
-def test_pack(hdr):
-    hdr.msg_type = 1
-    expected_pack = hdr.msg_type.to_bytes(protocol.chat_header.PKT_TYPE_FIELD_SIZE, 'little') + \
-                    hdr.msg_len.to_bytes(protocol.chat_header.PKT_LEN_FIELD_SIZE, 'little')
-    assert expected_pack == hdr.pack()
+@pytest.mark.parametrize('msg_type', get_test_msg_types())
+def test_hdr_pack_unpack(hdr, msg_type):
+    hdr.msg_type = msg_type
+    hdr.msg_len = 1
+    pkt = hdr.pack()
 
+    test_hdr = protocol.chat_header()
+    test_hdr.unpack(pkt)
+    
+    assert test_hdr.msg_type == hdr.msg_type == msg_type
+    assert test_hdr.msg_len == hdr.msg_len == 1
 
-def test_unpack(hdr):
-    msg_len = 65533
-    msg_type = 2
-    hdr.unpack(msg_type.to_bytes(protocol.chat_header.PKT_TYPE_FIELD_SIZE, 'little') + \
-               msg_len.to_bytes(protocol.chat_header.PKT_LEN_FIELD_SIZE, 'little'))
-    assert hdr.msg_len == msg_len
-    assert hdr.msg_type == msg_type

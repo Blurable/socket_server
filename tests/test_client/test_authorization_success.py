@@ -8,7 +8,7 @@ def test_authorization_success(mock_client):
     input_queue.put('Artyom')
     
     pkt = protocol.chat_connack()
-    pkt.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED
+    pkt.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value
     recv_queue.put(pkt.pack())
     client.authorize()
     

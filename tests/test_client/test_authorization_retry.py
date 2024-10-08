@@ -7,12 +7,12 @@ def test_authorization_retry(mock_client):
 
     input_queue.put('Baho')
     pkt1 = protocol.chat_connack()
-    pkt1.conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY
+    pkt1.conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY.value
     recv_queue.put(pkt1.pack())
 
     input_queue.put('Artyom')
     pkt2 = protocol.chat_connack()
-    pkt2.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED
+    pkt2.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value
     recv_queue.put(pkt2.pack())
     
     client.authorize()

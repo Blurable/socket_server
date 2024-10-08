@@ -4,10 +4,10 @@ import socket_chat.protocol as protocol
 
 def get_test_data():
     pkt1 = protocol.chat_command()
-    pkt1.comm_type = protocol.chat_command.COMM_TYPE.COMM_MEMBERS
+    pkt1.comm_type = protocol.chat_command.COMM_TYPE.COMM_MEMBERS.value
 
     pkt2 = protocol.chat_header()
-    pkt2.msg_type = protocol.MSG_TYPE.CHAT_CONNACK
+    pkt2.msg_type = protocol.MSG_TYPE.CHAT_CONNACK.value
 
     pkt3 = b'30120329412'
 

@@ -13,7 +13,7 @@ def test_main_handler_members_with_users(mock_client_handler, clients, msg):
     client.clients.add_if_not_exists(client.username, client.client)
 
     rcv_msg = protocol.chat_command()
-    rcv_msg.comm_type = rcv_msg.COMM_TYPE.COMM_MEMBERS
+    rcv_msg.comm_type = rcv_msg.COMM_TYPE.COMM_MEMBERS.value
     buffer_queue.put(rcv_msg.pack())
 
     client.main_handler()

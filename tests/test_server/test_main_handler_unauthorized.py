@@ -6,10 +6,10 @@ def handler_error_tests():
     pkt1 = b'1239321312'
 
     pkt2 = protocol.chat_command()
-    pkt2.comm_type = pkt2.COMM_TYPE.COMM_MEMBERS
+    pkt2.comm_type = pkt2.COMM_TYPE.COMM_MEMBERS.value
 
     pkt3 = protocol.chat_connack()
-    pkt3.conn_type = pkt3.CONN_TYPE.CONN_RETRY
+    pkt3.conn_type = pkt3.CONN_TYPE.CONN_RETRY.value
 
     pkt4 = protocol.chat_disconnect()
 

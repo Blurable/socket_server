@@ -59,15 +59,15 @@ class Client:
                 self.server.send(conn.pack())
 
                 hdr, payload = self.recv_pkt()
-                if hdr.msg_type == protocol.MSG_TYPE.CHAT_CONNACK:
+                if hdr.msg_type == protocol.MSG_TYPE.CHAT_CONNACK.value:
                     pkt = protocol.chat_connack()
                     pkt.unpack(payload)
-                    if pkt.conn_type == protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED:
+                    if pkt.conn_type == protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value:
                         self.username = username
                         break
-                    elif pkt.conn_type == protocol.chat_connack.CONN_TYPE.CONN_RETRY:
+                    elif pkt.conn_type == protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
                         print("[*]Username is already taken, try again")
-                    elif pkt.conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION:
+                    elif pkt.conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
                         print("[*]Protocol version is out of date.")
                         raise ValueError
                     else:
@@ -81,7 +81,7 @@ class Client:
 
     def handle(self, hdr, payload):
         match hdr.msg_type:
-            case protocol.MSG_TYPE.CHAT_MSG:
+            case protocol.MSG_TYPE.CHAT_MSG.value:
                 pkt = protocol.chat_msg()
                 pkt.unpack(payload)
                 self.handle_msg(pkt)
@@ -116,7 +116,7 @@ class Client:
                         print(self.info())
                     case '/members':
                         pkt = protocol.chat_command()
-                        pkt.comm_type = pkt.COMM_TYPE.COMM_MEMBERS
+                        pkt.comm_type = pkt.COMM_TYPE.COMM_MEMBERS.value
                         self.server.send(pkt.pack())
                     case '/all':
                         self.cur_channel = ""

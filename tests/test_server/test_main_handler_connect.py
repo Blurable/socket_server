@@ -3,9 +3,9 @@ import socket_chat.protocol as protocol
 
 
 def get_test_data():
-    return [('Artyom', protocol.SERVER_CONFIG.CURRENT_VERSION, protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED),
-            ('Username', protocol.SERVER_CONFIG.CURRENT_VERSION, protocol.chat_connack.CONN_TYPE.CONN_RETRY),
-            ('Artyom', '', protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION)]
+    return [('Artyom', protocol.SERVER_CONFIG.CURRENT_VERSION, protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value),
+            ('Username', protocol.SERVER_CONFIG.CURRENT_VERSION, protocol.chat_connack.CONN_TYPE.CONN_RETRY.value),
+            ('Artyom', '', protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value)]
 
 
 @pytest.mark.parametrize('username, protocol_version, conn_type', get_test_data())
@@ -23,12 +23,12 @@ def test_main_handler_connect(mock_client_handler, username, protocol_version, c
     snd_msg.conn_type = conn_type
 
     assert snd_msg.pack() == send_queue.get()
-    if conn_type == protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED:
+    if conn_type == protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value:
         assert username in client.clients
         assert client.clients[username] == client.client
-    elif conn_type == protocol.chat_connack.CONN_TYPE.CONN_RETRY:
+    elif conn_type == protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
         assert username in client.clients
-    elif conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION:
+    elif conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
         assert username not in client.clients
 
 

@@ -2,7 +2,6 @@ import pytest
 import socket_chat.protocol as protocol
 
 
-
 @pytest.mark.parametrize("username, flag_status", [
     ('', False),
     ('sys', False),

@@ -8,25 +8,26 @@ def connack():
     return connack
 
 
-@pytest.mark.parametrize('conn_type', [protocol.chat_connack.CONN_TYPE.CONN_NULL, 
-                                       protocol.chat_connack.CONN_TYPE.CONN_MAX, 
+@pytest.mark.parametrize('conn_type', [protocol.chat_connack.CONN_TYPE.CONN_NULL.value, 
+                                       protocol.chat_connack.CONN_TYPE.CONN_MAX.value, 
                                        256])
 def test_connack_failure(connack, conn_type):
     connack.conn_type = conn_type
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         assert connack.pack()
 
 
-def test_connack_pack(connack):
-    connack.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED
-    connack_msg = protocol.MSG_TYPE.CHAT_CONNACK.to_bytes(protocol.chat_header.PKT_TYPE_FIELD_SIZE, 'little') + \
-                  protocol.chat_connack.CONN_TYPE_FIELD_SIZE.to_bytes(protocol.chat_header.PKT_LEN_FIELD_SIZE, 'little') + \
-                  connack.conn_type.to_bytes(protocol.chat_connack.CONN_TYPE_FIELD_SIZE, 'little')
-    assert connack_msg == connack.pack()
+@pytest.mark.parametrize('conn_type', [(protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value),
+                                       (protocol.chat_connack.CONN_TYPE.CONN_RETRY.value),
+                                       (protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value)])
+def test_connack_pack_unpack(connack, conn_type):
+    connack.conn_type = conn_type
+    pkt = connack.pack()
+
+    test_connack = protocol.chat_connack()
+    test_connack.unpack(pkt[3:])
+    
+    assert test_connack.conn_type == connack.conn_type == conn_type
 
 
-def test_connack_unpack(connack):
-    conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY
-    connack.unpack(conn_type.to_bytes(protocol.chat_connack.CONN_TYPE_FIELD_SIZE, 'little'))
-    assert connack.conn_type == conn_type
 
