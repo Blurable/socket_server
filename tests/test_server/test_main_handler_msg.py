@@ -1,25 +1,31 @@
 import pytest
-from unittest.mock import MagicMock
 import socket_chat.protocol as protocol
+from socket_chat.tsdict import ThreadSafeDict
 
 
-def test_main_handler_msg_broadcast(mock_client_handler):
+@pytest.mark.parametrize('clients_in_dict', [(True), (False)])
+def test_main_handler_msg_broadcast(mock_client_handler, clients_in_dict):
     client, buffer_queue, send_queue = mock_client_handler
 
+    if not clients_in_dict:
+        client.clients = ThreadSafeDict()
     client.username = 'Artyom'
     rcv_msg = protocol.chat_msg()
     buffer_queue.put(rcv_msg.pack())
 
-    client.main_handler()
+    hdr, payload = client.recv_pkt()
+    client.handle_pkt(hdr, payload)
 
     snd_msg = protocol.chat_msg()
     snd_msg.msg = ''
     snd_msg.dst = ''
     snd_msg.src = ''
 
-    packed_msg = send_queue.get()
-
-    assert packed_msg == snd_msg.pack()
+    if not clients_in_dict:
+        assert send_queue.empty()
+    else:
+        packed_msg = send_queue.get()
+        assert packed_msg == snd_msg.pack()
 
 
 
@@ -34,7 +40,8 @@ def test_main_handler_unauthorized_dst(mock_client_handler):
     rcv_msg.msg = 'Hello'
     buffer_queue.put(rcv_msg.pack())
 
-    client.main_handler()
+    hdr, payload = client.recv_pkt()
+    client.handle_pkt(hdr, payload)
 
     snd_msg = protocol.chat_msg()
     snd_msg.msg = 'Moytra is offline'
@@ -57,7 +64,8 @@ def test_main_handler_authorized_dst(mock_client_handler):
     rcv_msg.msg = 'Hello'
     buffer_queue.put(rcv_msg.pack())
 
-    client.main_handler()
+    hdr, payload = client.recv_pkt()
+    client.handle_pkt(hdr, payload)
 
     snd_msg = protocol.chat_msg()
     snd_msg.msg = 'Hello'

@@ -39,7 +39,7 @@ class chat_header:
 
     def pack(self) -> bytes:
         if self.msg_len > bytes_limit(self.PKT_LEN_FIELD_SIZE) or \
-           not MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value:
+           not (MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value):
             raise ValueError
 
         return self.msg_type.to_bytes(self.PKT_TYPE_FIELD_SIZE, "little") + \
@@ -48,6 +48,8 @@ class chat_header:
     def unpack(self, data: bytes):
         msg_type = data[:self.PKT_TYPE_FIELD_SIZE]
         self.msg_type = int.from_bytes(msg_type, "little")
+        if not (MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value):
+            raise ValueError
         msg_len  = data[ self.PKT_TYPE_FIELD_SIZE : self.PKT_TYPE_FIELD_SIZE+self.PKT_LEN_FIELD_SIZE]
         self.msg_len = int.from_bytes(msg_len, "little")
 
@@ -106,7 +108,7 @@ class chat_connack:
         self.conn_type = self.CONN_TYPE.CONN_NULL.value
 
     def pack(self) -> bytes:
-        if not self.CONN_TYPE.CONN_NULL.value < self.conn_type < self.CONN_TYPE.CONN_MAX.value:
+        if not (self.CONN_TYPE.CONN_NULL.value < self.conn_type < self.CONN_TYPE.CONN_MAX.value):
             raise ValueError
 
         self.hdr.msg_len = self.CONN_TYPE_FIELD_SIZE
@@ -114,7 +116,8 @@ class chat_connack:
     
     def unpack(self, payload: bytes):
         self.conn_type = int.from_bytes(payload, "little")
-
+        if not (self.CONN_TYPE.CONN_NULL.value < self.conn_type < self.CONN_TYPE.CONN_MAX.value):
+            raise ValueError
 
 class chat_msg:
     SRC_LEN_FIELD_SIZE = 1
@@ -194,7 +197,7 @@ class chat_command:
         self.comm_type = self.COMM_TYPE.COMM_NULL.value
 
     def pack(self) -> bytes:
-        if not self.COMM_TYPE.COMM_NULL.value < self.comm_type < self.COMM_TYPE.COMM_MAX.value:
+        if not (self.COMM_TYPE.COMM_NULL.value < self.comm_type < self.COMM_TYPE.COMM_MAX.value):
             raise ValueError
 
         self.hdr.msg_len = self.COMMAND_TYPE_FIELD_SIZE
@@ -202,8 +205,8 @@ class chat_command:
     
     def unpack(self, payload: bytes):
         self.comm_type = int.from_bytes(payload, "little")
-
-
+        if not (self.COMM_TYPE.COMM_NULL.value < self.comm_type < self.COMM_TYPE.COMM_MAX.value):
+            raise ValueError
 
 class chat_disconnect:
     def __init__(self):

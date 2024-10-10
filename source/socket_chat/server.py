@@ -39,7 +39,8 @@ class ClientHandler:
     def run(self):
         try:
             while True:
-                if not self.main_handler():
+                hdr, payload = self.recv_pkt()
+                if not self.handle_pkt(hdr, payload):
                     break
         except Exception as e:
             print(f'[-]Error: {e}')
@@ -48,22 +49,24 @@ class ClientHandler:
 
 
     def recv_pkt(self):
-        hdr_bytes = self.client.recv(protocol.chat_header.PKT_TYPE_FIELD_SIZE + 
-                                     protocol.chat_header.PKT_LEN_FIELD_SIZE)
+        hdr_len = protocol.chat_header.PKT_TYPE_FIELD_SIZE + protocol.chat_header.PKT_LEN_FIELD_SIZE
+        hdr_bytes = b''
+        hdr_bytes += self.client.recv(1)
+        self.client.settimeout(5)
+        while len(hdr_bytes) < hdr_len:
+            hdr_bytes += self.client.recv(hdr_len - len(hdr_bytes))
         hdr = protocol.chat_header()
         hdr.unpack(hdr_bytes)
 
-        if hdr.msg_len:
-            payload = self.client.recv(hdr.msg_len)
-        else:
-            payload = b''
-        if len(payload) != hdr.msg_len:
-            raise ValueError
+        payload_len = hdr.msg_len
+        payload = b''
+        while len(payload) < payload_len:
+            payload += self.client.recv(payload_len - len(payload))
+        self.client.settimeout(None)
         return hdr, payload
     
 
-    def main_handler(self):
-        hdr, payload = self.recv_pkt()
+    def handle_pkt(self, hdr, payload):
         if not self.username and hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNECT.value:
             raise ValueError('Invalid packets on unauthorized user')
         match hdr.msg_type:

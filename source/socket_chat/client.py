@@ -38,18 +38,25 @@ class Client:
 
         
     def recv_pkt(self):
-        hdr_bytes = self.server.recv(protocol.chat_header.PKT_TYPE_FIELD_SIZE + 
-                                             protocol.chat_header.PKT_LEN_FIELD_SIZE)
+        hdr_len = protocol.chat_header.PKT_TYPE_FIELD_SIZE + protocol.chat_header.PKT_LEN_FIELD_SIZE
+        hdr_bytes = b''
+
+        hdr_bytes += self.server.recv(1)
+        self.server.settimeout(5)
+        while len(hdr_bytes) < hdr_len:
+            hdr_bytes += self.server.recv(hdr_len - len(hdr_bytes))
         hdr = protocol.chat_header()
         hdr.unpack(hdr_bytes)
-        if hdr.msg_len:
-            payload = self.server.recv(hdr.msg_len)
-        else:
-            payload = b''
-        if len(payload) != hdr.msg_len:
-            raise ValueError
-        return (hdr, payload)
 
+        payload_len = hdr.msg_len
+        payload = b''
+        while len(payload) < payload_len:
+            payload += self.server.recv(payload_len - len(payload))
+            print(len(payload), payload_len)
+        self.server.settimeout(None)
+        
+        return hdr, payload
+        
 
     def authorize(self):
         while True:
@@ -78,6 +85,7 @@ class Client:
                     raise ValueError
             else:
                 print("[*]Username is not valid, try again")    
+
 
     def handle(self, hdr, payload):
         match hdr.msg_type:

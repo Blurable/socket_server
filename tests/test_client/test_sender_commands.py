@@ -20,7 +20,8 @@ def test_sender_commands(mock_client, input, send):
     client, _, input_queue, send_queue = mock_client
 
     input_queue.put(input)
-    threading.Thread(target=client.sender, daemon=True).start()
-    client.stop_event.is_set()
+    input_queue.put(ValueError())
+
+    client.sender()
     
     assert send_queue.get() == send.pack()

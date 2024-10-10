@@ -17,7 +17,8 @@ def test_main_handler_connect(mock_client_handler, username, protocol_version, c
     rcv_msg.protocol_version = protocol_version
     buffer_queue.put(rcv_msg.pack())
 
-    client.main_handler()
+    hdr, payload = client.recv_pkt()
+    client.handle_pkt(hdr, payload)
 
     snd_msg = protocol.chat_connack()
     snd_msg.conn_type = conn_type

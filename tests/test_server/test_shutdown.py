@@ -9,7 +9,8 @@ def test_shutdown(mock_client_handler):
     rcv_msg.username = 'Artyom'
     buffer_queue.put(rcv_msg.pack())
 
-    client.main_handler()
+    hdr, payload = client.recv_pkt()
+    client.handle_pkt(hdr, payload)
 
     assert client.username in client.clients
 

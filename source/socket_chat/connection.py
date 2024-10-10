@@ -1,4 +1,3 @@
-import socket
 import threading
 import socket
 
@@ -23,3 +22,7 @@ class Connection:
 
     def close(self):
         self.sock.close()
+
+
+    def settimeout(self, time):
+        self.sock.settimeout(time)

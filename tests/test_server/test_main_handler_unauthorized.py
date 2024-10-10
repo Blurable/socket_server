@@ -24,6 +24,7 @@ def test_main_handler_unauthorized(mock_client_handler, recv):
     client, buffer_queue, _ = mock_client_handler
     buffer_queue.put(recv)
     with pytest.raises(ValueError):
-        client.main_handler()
+        hdr, payload = client.recv_pkt()
+        client.handle_pkt(hdr, payload)
 
 

@@ -9,11 +9,11 @@ def get_test_data():
     pkt2 = protocol.chat_header()
     pkt2.msg_type = protocol.MSG_TYPE.CHAT_CONNACK.value
 
-    pkt3 = b'30120329412'
+    pkt3 = b'\x03\x99\x0094122'
 
     pkt4 = protocol.chat_disconnect()
 
-    pkt5 = b'\x03\x01\x00\x99'
+    pkt5 = b'\x99\x01\x00\x99'
 
     return [(pkt1.pack()), (pkt2.pack()), (pkt3), (pkt4.pack()), (pkt5)]
 

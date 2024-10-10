@@ -11,7 +11,8 @@ def test_main_handler_disconnect(mock_client_handler):
     rcv_msg = protocol.chat_disconnect()
     buffer_queue.put(rcv_msg.pack())
 
-    client.main_handler()
+    hdr, payload = client.recv_pkt()
+    client.handle_pkt(hdr, payload)
 
     snd_msg = protocol.chat_msg()
     snd_msg.src = protocol.SERVER_CONFIG.SERVER_NAME
