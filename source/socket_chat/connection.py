@@ -17,7 +17,10 @@ class Connection:
 
 
     def recv(self, len: int) -> bytes:
-        return self.sock.recv(len)
+        msg = self.sock.recv(len)
+        if not msg:
+            raise socket.error
+        return msg
     
 
     def close(self):

@@ -11,8 +11,7 @@ def test_main_handler_disconnect(mock_client_handler):
     rcv_msg = protocol.chat_disconnect()
     buffer_queue.put(rcv_msg.pack())
 
-    hdr, payload = client.recv_pkt()
-    client.handle_pkt(hdr, payload)
+    client.run()
 
     snd_msg = protocol.chat_msg()
     snd_msg.src = protocol.SERVER_CONFIG.SERVER_NAME
@@ -21,5 +20,3 @@ def test_main_handler_disconnect(mock_client_handler):
 
     assert snd_msg.pack() == send_queue.get()
     assert client.username not in client.clients
-
-

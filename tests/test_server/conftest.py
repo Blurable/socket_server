@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from socket_chat.server import ClientHandler
 from socket_chat.tsdict import ThreadSafeDict
+import socket
 import time
 from queue import Queue
 
@@ -19,10 +20,10 @@ def mock_client_handler():
     def recv_side_effect(bufsize):
         nonlocal buffer_queue
         nonlocal buffer
+        if bufsize and not buffer and buffer_queue.empty():
+            raise socket.error
         if not bufsize and buffer_queue.empty():
             raise ValueError
-        if not bufsize:
-            return b''
         if not buffer:
             if not buffer_queue.empty():
                 buffer = buffer_queue.get()

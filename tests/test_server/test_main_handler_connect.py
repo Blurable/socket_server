@@ -18,6 +18,11 @@ def test_main_handler_connect(mock_client_handler, username, protocol_version, c
     buffer_queue.put(rcv_msg.pack())
 
     hdr, payload = client.recv_pkt()
+    if conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
+        with pytest.raises(ValueError):
+            client.handle_pkt(hdr, payload)
+        assert username not in client.clients
+        return
     client.handle_pkt(hdr, payload)
 
     snd_msg = protocol.chat_connack()
@@ -29,7 +34,5 @@ def test_main_handler_connect(mock_client_handler, username, protocol_version, c
         assert client.clients[username] == client.client
     elif conn_type == protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
         assert username in client.clients
-    elif conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
-        assert username not in client.clients
 
 

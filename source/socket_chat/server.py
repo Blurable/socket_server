@@ -79,7 +79,6 @@ class ClientHandler:
                 pkt.unpack(payload)
                 self.handle_msg(pkt)
             case protocol.MSG_TYPE.CHAT_DISCONNECT.value:
-                self.shutdown()
                 return False
             case protocol.MSG_TYPE.CHAT_COMMAND.value:
                 pkt = protocol.chat_command()
@@ -87,8 +86,7 @@ class ClientHandler:
                 self.handle_command(pkt)
             case _:
                 print(f"[-]Unexpected type {hdr.msg_type}")
-                self.shutdown()
-                return False
+                raise ValueError
         return True
 
     
@@ -98,7 +96,7 @@ class ClientHandler:
         if pkt.protocol_version != protocol.SERVER_CONFIG.CURRENT_VERSION:
             reply.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value
             self.client.send(reply.pack())
-            return
+            raise ValueError
 
         if pkt.username_validation(pkt.username):
             if self.clients.add_if_not_exists(pkt.username, self.client):
@@ -106,7 +104,7 @@ class ClientHandler:
                 reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value
                 self.username = pkt.username
                 self.client.send(reply.pack())
-                return
+                return True
         
         reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY.value
         self.client.send(reply.pack())
@@ -151,7 +149,7 @@ class ClientHandler:
                 self.client.send(reply.pack())
             case _:
                 print(f"[-]Unexpected type {pkt.comm_type}")
-                self.shutdown()
+                raise ValueError
                     
 
     def broadcast(self, msg: bytes):
