@@ -1,4 +1,5 @@
-import socket_chat.server as server
+from socket_chat.server import Server
 
 if __name__ == '__main__':
-    server.start_server(54321)
+    server = Server(54321)
+    server.start_server()
