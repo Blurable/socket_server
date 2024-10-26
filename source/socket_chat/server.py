@@ -1,4 +1,3 @@
-import re
 import socket
 import threading
 
@@ -6,27 +5,49 @@ from socket_chat.tsdict import ThreadSafeDict
 from socket_chat.connection import Connection
 import socket_chat.protocol as protocol
 
+class Server:
+    def __init__(self, host_port, host_ip = socket.gethostbyname(socket.gethostname())):
+        self.host_port = host_port
+        self.host_ip = host_ip
+        self.addr = (self.host_ip, self.host_port)
+        self.clients = ThreadSafeDict()
+        self.server_socket: socket.socket = None
+        self.is_active = True
 
-def start_server(host_port, host_ip = socket.gethostbyname(socket.gethostname())):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        server_socket.bind((host_ip, host_port))
-        server_socket.listen()
-        print('[*]Server is listening...\n')
-    except Exception as e:
-        print(f'[-]Error while starting the server: {e}')
-        server_socket.close()
 
-    clients = ThreadSafeDict()
-    while True:
+    def start_server(self):
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            client_socket, client_addr = server_socket.accept()
-            print(f"[*]Accepted connection from {client_addr[0]}:{client_addr[1]}")
-            handler = ClientHandler(Connection(client_socket), clients)
-            threading.Thread(target=handler.run, daemon=True).start()
+            self.server_socket.bind(self.addr)
+            self.server_socket.listen()
+            print('[*]Server is listening...\n')
+            self.accept_clients()
         except Exception as e:
-            print(f'[-]Error while accepting the client: {e}')
-            client_socket.close()
+            print(f'[-]Error while starting the server: {e}')
+            self.server_socket.close()
+            self.is_active = False
+
+
+    def accept_clients(self):
+        while self.is_active:
+            try:
+                client_socket, client_addr = self.server_socket.accept()
+                print(f"[*]Accepted connection from {client_addr[0]}:{client_addr[1]}")
+                handler = ClientHandler(Connection(client_socket), self.clients)
+                threading.Thread(target=handler.run, daemon=True).start()
+            except socket.error as e:
+                if e.errno == 10038:
+                    print(f'[-]Server socket was closed')
+                    self.is_active = False
+                else:
+                    print(f'[-]Socket error while accepting the client: {e}')
+                    if client_socket:
+                        client_socket.close()
+            except Exception as e:
+                print(f'[-]Exception error while accepting the client: {e}')
+                if client_socket:
+                    client_socket.close()
+                
 
 
 class ClientHandler:
@@ -38,20 +59,18 @@ class ClientHandler:
     
     def run(self):
         try:
-            while True:
+            while self.client.is_active:
                 hdr, payload = self.recv_pkt()
-                if not self.handle_pkt(hdr, payload):
-                    break
+                self.handle_pkt(hdr, payload)
         except Exception as e:
             print(f'[-]Error: {e}')
-        finally:
             self.shutdown()
 
 
     def recv_pkt(self):
         hdr_len = protocol.chat_header.PKT_TYPE_FIELD_SIZE + protocol.chat_header.PKT_LEN_FIELD_SIZE
         hdr_bytes = b''
-        hdr_bytes += self.client.recv(1)
+        hdr_bytes += self.client.recv(hdr_len)
         self.client.settimeout(5)
         while len(hdr_bytes) < hdr_len:
             hdr_bytes += self.client.recv(hdr_len - len(hdr_bytes))
@@ -79,7 +98,7 @@ class ClientHandler:
                 pkt.unpack(payload)
                 self.handle_msg(pkt)
             case protocol.MSG_TYPE.CHAT_DISCONNECT.value:
-                return False
+                self.shutdown()
             case protocol.MSG_TYPE.CHAT_COMMAND.value:
                 pkt = protocol.chat_command()
                 pkt.unpack(payload)
@@ -87,7 +106,6 @@ class ClientHandler:
             case _:
                 print(f"[-]Unexpected type {hdr.msg_type}")
                 raise ValueError
-        return True
 
     
     def handle_connect(self, pkt: protocol.chat_connect):

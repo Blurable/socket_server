@@ -9,11 +9,10 @@ class Client:
     def __init__(self, server_port, server_ip = socket.gethostbyname(socket.gethostname())):
         self.serv_addr = (server_ip, server_port)
 
-        self.sock = None
-        self.username = ""
-        self.cur_channel = ""
-        self.stop_event = threading.Event()
-        self.chat_members = []
+        self.sock: socket.socket = None
+        self.server: Connection = None
+        self.username: str = ""
+        self.cur_channel: str = ""
 
 
     def connect_to_server(self):
@@ -22,6 +21,7 @@ class Client:
             self.sock.connect(self.serv_addr)      
         except Exception as e:
             print(f'Error while connecting to server: {e}')
+            self.sock.close()
             return
         self.server = Connection(self.sock)
 
@@ -29,6 +29,7 @@ class Client:
             self.authorize()
         except Exception as e:
             print(f'Error while authorizing: {e}')
+            self.server.close()
             return
         print("[*]Authorized!")
         print(self.info())
@@ -41,7 +42,7 @@ class Client:
         hdr_len = protocol.chat_header.PKT_TYPE_FIELD_SIZE + protocol.chat_header.PKT_LEN_FIELD_SIZE
         hdr_bytes = b''
 
-        hdr_bytes += self.server.recv(1)
+        hdr_bytes += self.server.recv(hdr_len)
         self.server.settimeout(5)
         while len(hdr_bytes) < hdr_len:
             hdr_bytes += self.server.recv(hdr_len - len(hdr_bytes))
@@ -52,15 +53,19 @@ class Client:
         payload = b''
         while len(payload) < payload_len:
             payload += self.server.recv(payload_len - len(payload))
-            print(len(payload), payload_len)
         self.server.settimeout(None)
         
         return hdr, payload
         
 
+    def wrap_input(self, input_msg: str):
+        msg = input(input_msg)
+        return msg
+
+
     def authorize(self):
-        while True:
-            username = input("[*]Please enter your username (must contain only letters):")
+        while self.server.is_active:
+            username = self.wrap_input("[*]Please enter your username (must contain only letters):")
             conn = protocol.chat_connect()
             if conn.username_validation(username):
                 self.server.send(conn.pack())
@@ -111,15 +116,15 @@ class Client:
 
     def sender(self):
         try:
-            while not self.stop_event.is_set():
+            while self.server.is_active:
                 channel = self.cur_channel if self.cur_channel else "all"
-                msg = input(f"[/{channel}]:")
+                msg = self.wrap_input(f"[/{channel}]:")
                 match msg.lower():
                     case '/quit':
                         pkt = protocol.chat_disconnect()
                         self.server.send(pkt.pack())
                         print('[*]Quitting chat')
-                        break
+                        self.server.close()
                     case '/info':
                         print(self.info())
                     case '/members':
@@ -138,21 +143,17 @@ class Client:
                         self.server.send(pkt.pack())
         except Exception as e:
             print(f'Error in sender: {e}')
-        finally:
             self.server.close()
-            self.stop_event.set()
             
 
     def receiver(self):
         try:
-            while not self.stop_event.is_set():
+            while self.server.is_active:
                 hdr, payload = self.recv_pkt()
                 self.handle(hdr, payload)
         except Exception as e:
             print(f'[-]Error in receiver: {e}')
-        finally:
             self.server.close()
-            self.stop_event.set()
 
 
 if __name__ == "__main__":
