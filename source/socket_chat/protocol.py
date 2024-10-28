@@ -20,7 +20,6 @@ class SERVER_CONFIG:
 
 class MSG_TYPE(Enum):
     CHAT_NULL = auto()
-    CHAT_PROTOCOL_VERIFICATION = auto()
     CHAT_CONNECT = auto()
     CHAT_CONNACK = auto()
     CHAT_MSG = auto()

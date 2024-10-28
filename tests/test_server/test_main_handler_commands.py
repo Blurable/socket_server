@@ -26,3 +26,12 @@ def test_main_handler_members_with_users(mock_client_handler, clients, msg):
 
     assert snd_msg.pack() == send_queue.get()
 
+
+def test_wrong_command(mock_client_handler):
+    client, _, _ = mock_client_handler
+    pkt = protocol.chat_command()
+    pkt.comm_type = None
+    
+    with pytest.raises(ValueError):
+        client.handle_command(pkt)
+

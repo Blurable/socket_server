@@ -76,3 +76,11 @@ class ThreadSafeDict:
             if key in self.dictionary:
                 return self.dictionary[key]
             return None
+        
+
+    def __repr__(self):
+        return f"CustomDict({self.dictionary})"
+
+
+    def __str__(self):
+        return str(self.dictionary)

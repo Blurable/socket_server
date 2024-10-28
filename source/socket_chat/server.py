@@ -87,7 +87,7 @@ class ClientHandler:
 
     def handle_pkt(self, hdr, payload):
         if not self.username and hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNECT.value:
-            raise ValueError('Invalid packets on unauthorized user')
+            raise ValueError('Invalid packets from unauthorized user')
         match hdr.msg_type:
             case protocol.MSG_TYPE.CHAT_CONNECT.value:
                 pkt = protocol.chat_connect()
