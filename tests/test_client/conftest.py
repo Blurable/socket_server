@@ -2,8 +2,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 from socket_chat.client import Client
 from queue import Queue
-import time
-
 
 
 @pytest.fixture
@@ -19,19 +17,10 @@ def mock_client():
     def recv_side_effect(bufsize):
         nonlocal buffer_queue, buffer
 
-        if not bufsize and buffer_queue.empty():
-            raise ValueError
-        if not bufsize:
-            return b''
-        if not buffer:
-            if not buffer_queue.empty():
-                buffer = buffer_queue.get()
-            else:
-                time.sleep(timeout)
-                if buffer_queue.empty():
-                    raise ValueError
-                else:
-                    buffer = buffer_queue.get()
+        if not buffer and not buffer_queue.empty():
+            buffer += buffer_queue.get()
+        if bufsize and not buffer:
+            return ValueError
             
         chunk = buffer[ : bufsize]
         buffer = buffer[bufsize : ]

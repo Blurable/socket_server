@@ -61,7 +61,7 @@ def test_main_handler_authorized_dst(mock_client_handler):
 
     rcv_msg = protocol.chat_msg()
     rcv_msg.src = client.username
-    rcv_msg.dst = 'Username'
+    rcv_msg.dst = 'Dummy'
     rcv_msg.msg = 'Hello'
     buffer_queue.put(rcv_msg.pack())
 
@@ -70,7 +70,7 @@ def test_main_handler_authorized_dst(mock_client_handler):
 
     snd_msg = protocol.chat_msg()
     snd_msg.msg = 'Hello'
-    snd_msg.dst = 'Username'
+    snd_msg.dst = 'Dummy'
     snd_msg.src = client.username
 
     packed_msg = send_queue.get()
@@ -82,8 +82,8 @@ def test_msg_error_with_dst(mock_client_handler):
     client, buffer_queue, send_queue = mock_client_handler
 
     client.username = 'Artyom'
-    test_client = 'Dummy'
-    client.clients[test_client] = 'fake_socket'
+    test_client = 'Fake'
+    client.clients.add_if_not_exists(test_client, 'fake_socket')
 
     rcv_msg = protocol.chat_msg()
     rcv_msg.src = client.username

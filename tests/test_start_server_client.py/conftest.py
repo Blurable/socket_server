@@ -32,10 +32,11 @@ def test_server():
          patch.object(ThreadSafeDict, '__delitem__', new=new_delitem):
         server = Server(54321)
         threading.Thread(target=server.start_server, daemon=True).start()
-        sleep(1)
+        sleep(0.5)
         yield server, added_clients, removed_clients
     if server:
         server.server_socket.close()
+        sleep(0.5)
 
 
 @pytest.fixture(scope='function')
@@ -45,8 +46,8 @@ def test_client():
     with patch('builtins.input', side_effect=lambda _: input_queue.get()):
         client = Client(54321)
         threading.Thread(target=client.connect_to_server, daemon=True).start()
-        sleep(1)
+        sleep(0.5)
         yield client, input_queue
     if client:
         client.sock.close()
-        sleep(1)
+        sleep(0.5)

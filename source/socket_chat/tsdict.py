@@ -12,51 +12,16 @@ class ThreadSafeDict:
             if key in self.dictionary:
                 del self.dictionary[key]
 
-
-    def __setitem__(self, key, value):
-        with self.lock:
-            self.dictionary[key] = value
-
-
-    def __getitem__(self, key):
-        with self.lock:
-            return self.dictionary[key]
-
     
     def __contains__(self, key):
         with self.lock:
             return True if key in self.dictionary else False
     
 
-    def __len__(self):
-        with self.lock:
-            return len(self.dictionary)
-    
-
-    def __iter__(self):
-        with self.lock:
-            return iter(self.dictionary)
-
-
-    def keys(self):
-        with self.lock:
-            return self.dictionary.keys()
-    
-
-    def values(self):
-        with self.lock:
-            return self.dictionary.values()
-
-
     def copy_values(self):
         with self.lock:
             return list(self.dictionary.values())
         
-
-    def items(self):
-        with self.lock:
-            return self.dictionary.items()
-
 
     def copy_keys(self):
         with self.lock:

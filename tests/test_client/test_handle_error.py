@@ -22,6 +22,6 @@ def test_handle_error(mock_client, recv):
     client, recv_queue, _, _ = mock_client
     
     recv_queue.put(recv)
-    with pytest.raises(ValueError):
+    with pytest.raises(protocol.ProtocolTypeException):
         hdr, payload = client.recv_pkt()
         client.handle(hdr, payload)

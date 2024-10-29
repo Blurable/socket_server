@@ -19,10 +19,10 @@ def test_main_handler_no_case(mock_client_handler):
 
     assert snd_msg.pack() == send_queue.get()
     assert username in client.clients
-    assert client.clients[username] == client.client
+    assert client.clients.get_if_exists(username) == client.client
 
     hdr = protocol.chat_header()
     hdr.msg_type = None
     payload = None
-    with pytest.raises(ValueError):
+    with pytest.raises(protocol.ProtocolTypeException):
         client.handle_pkt(hdr, payload)

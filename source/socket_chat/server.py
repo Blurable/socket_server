@@ -71,6 +71,7 @@ class ClientHandler:
         hdr_len = protocol.chat_header.PKT_TYPE_FIELD_SIZE + protocol.chat_header.PKT_LEN_FIELD_SIZE
         hdr_bytes = b''
         hdr_bytes += self.client.recv(hdr_len)
+        
         self.client.settimeout(5)
         while len(hdr_bytes) < hdr_len:
             hdr_bytes += self.client.recv(hdr_len - len(hdr_bytes))
@@ -104,8 +105,7 @@ class ClientHandler:
                 pkt.unpack(payload)
                 self.handle_command(pkt)
             case _:
-                print(f"[-]Unexpected type {hdr.msg_type}")
-                raise ValueError
+                raise protocol.ProtocolTypeException(f"[-]Unexpected type {hdr.msg_type}")
 
     
     def handle_connect(self, pkt: protocol.chat_connect):
@@ -114,7 +114,7 @@ class ClientHandler:
         if pkt.protocol_version != protocol.SERVER_CONFIG.CURRENT_VERSION:
             reply.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value
             self.client.send(reply.pack())
-            raise ValueError
+            raise protocol.ProtocolVersionException('Wrong protocol version')
 
         if pkt.username_validation(pkt.username):
             if self.clients.add_if_not_exists(pkt.username, self.client):
@@ -123,7 +123,7 @@ class ClientHandler:
                 self.username = pkt.username
                 self.client.send(reply.pack())
                 return True
-        
+
         reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY.value
         self.client.send(reply.pack())
 
@@ -166,8 +166,7 @@ class ClientHandler:
                     reply.msg = '\n'.join(self.clients.copy_keys())
                 self.client.send(reply.pack())
             case _:
-                print(f"[-]Unexpected type {pkt.comm_type}")
-                raise ValueError
+                raise protocol.ProtocolTypeException(f"[-]Unexpected type {pkt.comm_type}")
                     
 
     def broadcast(self, msg: bytes):

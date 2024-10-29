@@ -3,7 +3,7 @@ import socket_chat.protocol as protocol
 from socket_chat.tsdict import ThreadSafeDict
 
 @pytest.mark.parametrize('clients, msg', [(False, 'You are alone in the chat'),
-                                          (True, 'Username\nArtyom')] )
+                                          (True, 'Dummy\nArtyom')] )
 def test_main_handler_members_with_users(mock_client_handler, clients, msg):
     client, buffer_queue, send_queue = mock_client_handler
     
@@ -32,6 +32,6 @@ def test_wrong_command(mock_client_handler):
     pkt = protocol.chat_command()
     pkt.comm_type = None
     
-    with pytest.raises(ValueError):
+    with pytest.raises(protocol.ProtocolTypeException):
         client.handle_command(pkt)
 

@@ -6,7 +6,7 @@ class Connection:
 
     def __init__(self, sock: socket.socket):
         self.sock = sock
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        sock.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 20000, 5000))
         self.is_active = True
 
         self.sendLock = threading.Lock()

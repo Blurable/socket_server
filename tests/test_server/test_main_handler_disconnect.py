@@ -10,6 +10,7 @@ def test_main_handler_disconnect(mock_client_handler):
 
     rcv_msg = protocol.chat_disconnect()
     buffer_queue.put(rcv_msg.pack())
+    print(rcv_msg.pack(), 'asdasdasd')
 
     client.run()
 

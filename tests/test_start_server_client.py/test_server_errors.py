@@ -3,7 +3,7 @@ from unittest.mock import patch
 import socket
 import time
 
-from socket_chat.server import Server, ClientHandler
+from socket_chat.server import Server
 import threading
 
 

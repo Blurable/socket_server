@@ -9,9 +9,16 @@ def hdr():
     return hdr
 
 
-@pytest.mark.parametrize('hdr_len, msg_type', [(0, 1), (65536, 1), (1, protocol.MSG_TYPE.CHAT_NULL.value), (1, protocol.MSG_TYPE.CHAT_MAX.value)])
-def test_failure_pack(hdr, hdr_len, msg_type):
+def test_valueerror_pack(hdr):
     with pytest.raises(ValueError):
+        hdr.msg_len = 65536
+        hdr.msg_type = 1
+        hdr.pack()
+
+
+@pytest.mark.parametrize('hdr_len, msg_type', [(1, protocol.MSG_TYPE.CHAT_NULL.value), (1, protocol.MSG_TYPE.CHAT_MAX.value)])
+def test_type_exception_pack(hdr, hdr_len, msg_type):
+    with pytest.raises(protocol.ProtocolTypeException):
         hdr.msg_len = hdr_len
         hdr.msg_type = msg_type
         hdr.pack()
@@ -32,3 +39,10 @@ def test_hdr_pack_unpack(hdr, msg_type):
     assert test_hdr.msg_type == hdr.msg_type == msg_type
     assert test_hdr.msg_len == hdr.msg_len == 1
 
+
+@pytest.mark.parametrize('msg_type', [(protocol.MSG_TYPE.CHAT_NULL.value),
+                                       (protocol.MSG_TYPE.CHAT_MAX.value)])
+def test_hdr_failure_unpack(hdr, msg_type):
+    with pytest.raises(protocol.ProtocolTypeException):
+        msg_type = msg_type.to_bytes(protocol.chat_header.PKT_TYPE_FIELD_SIZE, 'little')
+        hdr.unpack(msg_type)

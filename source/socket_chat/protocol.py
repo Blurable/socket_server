@@ -5,6 +5,16 @@ def bytes_limit(bytes_num):
     return 2**(8*bytes_num)-1
 
 
+class ProtocolVersionException(Exception):
+    def __init__(self, message='Incorrect Version Type'):
+        self.message = message
+        super().__init__(self.message)
+
+class ProtocolTypeException(Exception):
+    def __init__(self, message='Incorrect Type'):
+        self.message = message
+        super().__init__(self.message)
+
 class SERVER_CONFIG:
     CURRENT_VERSION = '1.0.0'
     SERVER_NAME = 'sys'
@@ -37,9 +47,11 @@ class chat_header:
         self.msg_len = 0
 
     def pack(self) -> bytes:
-        if self.msg_len > bytes_limit(self.PKT_LEN_FIELD_SIZE) or \
-           not (MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value):
+        if self.msg_len > bytes_limit(self.PKT_LEN_FIELD_SIZE):
             raise ValueError
+        
+        if not (MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value):
+            raise ProtocolTypeException
 
         return self.msg_type.to_bytes(self.PKT_TYPE_FIELD_SIZE, "little") + \
                self.msg_len.to_bytes(self.PKT_LEN_FIELD_SIZE, "little")
@@ -48,7 +60,7 @@ class chat_header:
         msg_type = data[:self.PKT_TYPE_FIELD_SIZE]
         self.msg_type = int.from_bytes(msg_type, "little")
         if not (MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value):
-            raise ValueError
+            raise ProtocolTypeException
         msg_len  = data[ self.PKT_TYPE_FIELD_SIZE : self.PKT_TYPE_FIELD_SIZE+self.PKT_LEN_FIELD_SIZE]
         self.msg_len = int.from_bytes(msg_len, "little")
 
@@ -108,7 +120,7 @@ class chat_connack:
 
     def pack(self) -> bytes:
         if not (self.CONN_TYPE.CONN_NULL.value < self.conn_type < self.CONN_TYPE.CONN_MAX.value):
-            raise ValueError
+            raise ProtocolTypeException
 
         self.hdr.msg_len = self.CONN_TYPE_FIELD_SIZE
         return self.hdr.pack() + self.conn_type.to_bytes(self.CONN_TYPE_FIELD_SIZE, "little")
@@ -116,7 +128,7 @@ class chat_connack:
     def unpack(self, payload: bytes):
         self.conn_type = int.from_bytes(payload, "little")
         if not (self.CONN_TYPE.CONN_NULL.value < self.conn_type < self.CONN_TYPE.CONN_MAX.value):
-            raise ValueError
+            raise ProtocolTypeException
 
 class chat_msg:
     SRC_LEN_FIELD_SIZE = 1
@@ -165,24 +177,6 @@ class chat_msg:
         return "[" + (f"/pm/{self.src}" if self.dst else f"/all/{self.src}") + "]:" + self.msg
 
 
-# class chat_switch:
-#     USERNAME_NAME_LEN_FIELD_SIZE = 1
-
-#     def __init__(self):
-#         self.hdr = chat_header(MSG_TYPE.CHAT_SWITCH)
-#         self.username = ""
-
-#     def pack(self):
-#         assert len(self.username) <= bytes_limit(self.USERNAME_NAME_LEN_FIELD_SIZE)
-
-#         self.hdr.msg_len = self.USERNAME_NAME_LEN_FIELD_SIZE + len(self.username)
-#         return self.hdr.pack() + len(self.username).to_bytes(self.USERNAME_NAME_LEN_FIELD_SIZE, "little") + self.username.encode()
-    
-#     def unpack(self, payload: bytes):
-#         username_len = int.from_bytes(payload[ : self.USERNAME_NAME_LEN_FIELD_SIZE], "little")
-#         self.username = payload[self.USERNAME_NAME_LEN_FIELD_SIZE : self.USERNAME_NAME_LEN_FIELD_SIZE+username_len].decode()
-
-
 class chat_command:
     COMMAND_TYPE_FIELD_SIZE = 1
 
@@ -197,7 +191,7 @@ class chat_command:
 
     def pack(self) -> bytes:
         if not (self.COMM_TYPE.COMM_NULL.value < self.comm_type < self.COMM_TYPE.COMM_MAX.value):
-            raise ValueError
+            raise ProtocolTypeException
 
         self.hdr.msg_len = self.COMMAND_TYPE_FIELD_SIZE
         return self.hdr.pack() + self.comm_type.to_bytes(self.COMMAND_TYPE_FIELD_SIZE, "little")
@@ -205,7 +199,8 @@ class chat_command:
     def unpack(self, payload: bytes):
         self.comm_type = int.from_bytes(payload, "little")
         if not (self.COMM_TYPE.COMM_NULL.value < self.comm_type < self.COMM_TYPE.COMM_MAX.value):
-            raise ValueError
+            raise ProtocolTypeException
+
 
 class chat_disconnect:
     def __init__(self):

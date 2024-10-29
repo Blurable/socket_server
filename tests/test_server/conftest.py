@@ -20,19 +20,11 @@ def mock_client_handler():
     def recv_side_effect(bufsize):
         nonlocal buffer_queue
         nonlocal buffer
-        if bufsize and not buffer and buffer_queue.empty():
-            raise socket.error
-        if not bufsize and buffer_queue.empty():
+
+        if not buffer and not buffer_queue.empty():
+            buffer = buffer_queue.get()
+        if bufsize and not buffer:
             raise ValueError
-        if not buffer:
-            if not buffer_queue.empty():
-                buffer = buffer_queue.get()
-            else:
-                time.sleep(timeout)
-                if buffer_queue.empty():
-                    raise ValueError
-                else:
-                    buffer = buffer_queue.get()
 
         chunk = buffer[ : bufsize]
         buffer = buffer[bufsize : ]
@@ -50,7 +42,7 @@ def mock_client_handler():
         mocked_connection.send.side_effect = send_side_effect
         mocked_connection.settimeout.side_effect = settimeout_side_effect
     
-    tsdict.add_if_not_exists('Username', mocked_connections[0])
+    tsdict.add_if_not_exists('Dummy', mocked_connections[0])
     
     client = ClientHandler(mocked_connections[1], tsdict)
     yield client, buffer_queue, send_queue

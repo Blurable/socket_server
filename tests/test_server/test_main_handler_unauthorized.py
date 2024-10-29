@@ -3,19 +3,17 @@ import socket_chat.protocol as protocol
 
 
 def handler_error_tests():
-    pkt1 = b'1239321312'
+    pkt1 = protocol.chat_command()
+    pkt1.comm_type = pkt1.COMM_TYPE.COMM_MEMBERS.value
 
-    pkt2 = protocol.chat_command()
-    pkt2.comm_type = pkt2.COMM_TYPE.COMM_MEMBERS.value
+    pkt2 = protocol.chat_connack()
+    pkt2.conn_type = pkt2.CONN_TYPE.CONN_RETRY.value
 
-    pkt3 = protocol.chat_connack()
-    pkt3.conn_type = pkt3.CONN_TYPE.CONN_RETRY.value
+    pkt3 = protocol.chat_disconnect()
 
-    pkt4 = protocol.chat_disconnect()
+    pkt4 = protocol.chat_msg()
 
-    pkt5 = protocol.chat_msg()
-
-    return [pkt1, pkt2.pack(), pkt3.pack(), pkt4.pack(), pkt5.pack()]
+    return [pkt1.pack(), pkt2.pack(), pkt3.pack(), pkt4.pack()]
 
 
 

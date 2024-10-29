@@ -1,6 +1,4 @@
 import pytest
-import socket
-import time
 
 
 def test_connection_error(test_client):
@@ -14,19 +12,40 @@ def test_authorization_error(test_server, test_client):
 
     assert client.server != None
 
+    username = 'Artyom'
     client.server.close()
-    input_queue.put('Artyom')
+    input_queue.put(username)
     
     assert client.server.is_active == False
-    assert len(server.clients) == 0
+    assert server.clients.get_if_exists(username) == None
+
+    server.server_socket.close()
 
 
-def test_connect_to_server(test_server, test_client):
+def test_connect_to_server_add_client(test_server, test_client):
     server, add_q, del_q = test_server
     client, input_q = test_client
 
     username = 'User'
     input_q.put(username)
-    client.server.is_active = False
+
     assert add_q.get() == username
     assert username in server.clients
+
+    server.server_socket.close()
+
+
+def test_disconnect_from_server_remove_client(test_client, test_server):
+    server, add_q, del_q = test_server
+    client, input_q = test_client
+
+    username = 'User'
+    input_q.put(username)
+
+    assert add_q.get() == username
+    assert username in server.clients
+
+    client.server.close()
+
+    assert del_q.get() == username
+    assert username not in server.clients

@@ -5,6 +5,7 @@ import threading
 from socket_chat.connection import Connection
 import socket_chat.protocol as protocol
 
+
 class Client:
     def __init__(self, server_port, server_ip = socket.gethostbyname(socket.gethostname())):
         self.serv_addr = (server_ip, server_port)
@@ -74,20 +75,18 @@ class Client:
                 if hdr.msg_type == protocol.MSG_TYPE.CHAT_CONNACK.value:
                     pkt = protocol.chat_connack()
                     pkt.unpack(payload)
-                    if pkt.conn_type == protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value:
-                        self.username = username
-                        break
-                    elif pkt.conn_type == protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
-                        print("[*]Username is already taken, try again")
-                    elif pkt.conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
-                        print("[*]Protocol version is out of date.")
-                        raise ValueError
-                    else:
-                        print("[-]Wrong connection type during authorize")
-                        raise ValueError
+                    match pkt.conn_type:
+                        case protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value:
+                            self.username = username
+                            break
+                        case protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
+                            print("[*]Username is already taken, try again")
+                        case protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
+                            raise protocol.ProtocolVersionException("[*]Protocol version is out of date.")
+                        case _:
+                            raise protocol.ProtocolTypeException("[-]Wrong connection type during authorize")
                 else:
-                    print("[-]Wrong msg type during authorize")
-                    raise ValueError
+                    raise protocol.ProtocolTypeException("[-]Wrong msg type during authorize")
             else:
                 print("[*]Username is not valid, try again")    
 
@@ -99,8 +98,7 @@ class Client:
                 pkt.unpack(payload)
                 self.handle_msg(pkt)
             case _:
-                print(f"[-]Unexpected type {hdr.msg_type}")
-                raise ValueError
+                raise protocol.ProtocolTypeException(f"[-]Unexpected type {hdr.msg_type} while handling the msg")
 
 
     def handle_msg(self, pkt: protocol.chat_msg):
@@ -154,8 +152,3 @@ class Client:
         except Exception as e:
             print(f'[-]Error in receiver: {e}')
             self.server.close()
-
-
-if __name__ == "__main__":
-    chat_server = Client(54321)
-    chat_server.connect_to_server()
