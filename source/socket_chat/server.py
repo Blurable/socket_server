@@ -114,7 +114,7 @@ class ClientHandler:
         if pkt.protocol_version != protocol.SERVER_CONFIG.CURRENT_VERSION:
             reply.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value
             self.client.send(reply.pack())
-            raise protocol.WrongProtocolVersionError('Wrong protocol version')
+            raise protocol.WrongProtocolVersionError('[-]Wrong protocol version')
 
         if pkt.username_validation(pkt.username):
             if self.clients.add_if_not_exists(pkt.username, self.client):
@@ -122,7 +122,7 @@ class ClientHandler:
                 reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value
                 self.username = pkt.username
                 self.client.send(reply.pack())
-                return True
+                return
 
         reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY.value
         self.client.send(reply.pack())
