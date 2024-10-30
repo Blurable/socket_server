@@ -80,7 +80,7 @@ class Client:
                         case protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
                             print("[*]Username is already taken, try again")
                         case protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
-                            raise protocol.WrongProtocolVersionError("[*]Protocol version is out of date.")
+                            raise protocol.WrongProtocolVersionError("[-]Protocol version is out of date.")
                         case _:
                             raise protocol.WrongProtocolTypeError("[-]Wrong connection type during authorize")
                 else:
