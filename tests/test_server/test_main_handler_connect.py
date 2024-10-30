@@ -21,7 +21,7 @@ def test_main_handler_connect(mock_client_handler, username, protocol_version, c
 
     hdr, payload = client.recv_pkt()
     if conn_type == protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
-        with pytest.raises(protocol.ProtocolVersionException):
+        with pytest.raises(protocol.WrongProtocolVersionError):
             client.handle_pkt(hdr, payload)
         assert username not in client.clients
         return

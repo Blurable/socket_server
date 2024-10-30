@@ -13,7 +13,7 @@ def connack():
                                        256])
 def test_connack_failure(connack, conn_type):
     connack.conn_type = conn_type
-    with pytest.raises(protocol.ProtocolTypeException):
+    with pytest.raises(protocol.WrongProtocolTypeError):
         assert connack.pack()
 
 
@@ -33,7 +33,7 @@ def test_connack_pack_unpack(connack, conn_type):
 @pytest.mark.parametrize('conn_type', [(protocol.chat_connack.CONN_TYPE.CONN_NULL.value),
                                        (protocol.chat_connack.CONN_TYPE.CONN_MAX.value)])
 def test_connack_failure_unpack(connack, conn_type):
-    with pytest.raises(protocol.ProtocolTypeException):
+    with pytest.raises(protocol.WrongProtocolTypeError):
         conn_type = conn_type.to_bytes(protocol.chat_connack.CONN_TYPE_FIELD_SIZE, 'little')
         connack.unpack(conn_type)
 

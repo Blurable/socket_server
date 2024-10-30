@@ -5,12 +5,12 @@ def bytes_limit(bytes_num):
     return 2**(8*bytes_num)-1
 
 
-class ProtocolVersionException(Exception):
+class WrongProtocolVersionError(Exception):
     def __init__(self, message='Incorrect Version Type'):
         self.message = message
         super().__init__(self.message)
 
-class ProtocolTypeException(Exception):
+class WrongProtocolTypeError(Exception):
     def __init__(self, message='Incorrect Type'):
         self.message = message
         super().__init__(self.message)
@@ -51,7 +51,7 @@ class chat_header:
             raise ValueError
         
         if not (MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value):
-            raise ProtocolTypeException
+            raise WrongProtocolTypeError
 
         return self.msg_type.to_bytes(self.PKT_TYPE_FIELD_SIZE, "little") + \
                self.msg_len.to_bytes(self.PKT_LEN_FIELD_SIZE, "little")
@@ -60,7 +60,7 @@ class chat_header:
         msg_type = data[:self.PKT_TYPE_FIELD_SIZE]
         self.msg_type = int.from_bytes(msg_type, "little")
         if not (MSG_TYPE.CHAT_NULL.value < self.msg_type < MSG_TYPE.CHAT_MAX.value):
-            raise ProtocolTypeException
+            raise WrongProtocolTypeError
         msg_len  = data[ self.PKT_TYPE_FIELD_SIZE : self.PKT_TYPE_FIELD_SIZE+self.PKT_LEN_FIELD_SIZE]
         self.msg_len = int.from_bytes(msg_len, "little")
 
@@ -120,7 +120,7 @@ class chat_connack:
 
     def pack(self) -> bytes:
         if not (self.CONN_TYPE.CONN_NULL.value < self.conn_type < self.CONN_TYPE.CONN_MAX.value):
-            raise ProtocolTypeException
+            raise WrongProtocolTypeError
 
         self.hdr.msg_len = self.CONN_TYPE_FIELD_SIZE
         return self.hdr.pack() + self.conn_type.to_bytes(self.CONN_TYPE_FIELD_SIZE, "little")
@@ -128,7 +128,7 @@ class chat_connack:
     def unpack(self, payload: bytes):
         self.conn_type = int.from_bytes(payload, "little")
         if not (self.CONN_TYPE.CONN_NULL.value < self.conn_type < self.CONN_TYPE.CONN_MAX.value):
-            raise ProtocolTypeException
+            raise WrongProtocolTypeError
 
 class chat_msg:
     SRC_LEN_FIELD_SIZE = 1
@@ -191,7 +191,7 @@ class chat_command:
 
     def pack(self) -> bytes:
         if not (self.COMM_TYPE.COMM_NULL.value < self.comm_type < self.COMM_TYPE.COMM_MAX.value):
-            raise ProtocolTypeException
+            raise WrongProtocolTypeError
 
         self.hdr.msg_len = self.COMMAND_TYPE_FIELD_SIZE
         return self.hdr.pack() + self.comm_type.to_bytes(self.COMMAND_TYPE_FIELD_SIZE, "little")
@@ -199,7 +199,7 @@ class chat_command:
     def unpack(self, payload: bytes):
         self.comm_type = int.from_bytes(payload, "little")
         if not (self.COMM_TYPE.COMM_NULL.value < self.comm_type < self.COMM_TYPE.COMM_MAX.value):
-            raise ProtocolTypeException
+            raise WrongProtocolTypeError
 
 
 class chat_disconnect:

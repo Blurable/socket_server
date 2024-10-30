@@ -24,5 +24,5 @@ def test_main_handler_no_case(mock_client_handler):
     hdr = protocol.chat_header()
     hdr.msg_type = None
     payload = None
-    with pytest.raises(protocol.ProtocolTypeException):
+    with pytest.raises(protocol.WrongProtocolTypeError):
         client.handle_pkt(hdr, payload)

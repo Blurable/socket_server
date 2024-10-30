@@ -22,7 +22,7 @@ def test_authorization_wrong_type(mock_client, recv):
 
     input_queue.put('Baho')
     recv_queue.put(recv)
-    with pytest.raises(protocol.ProtocolTypeException):
+    with pytest.raises(protocol.WrongProtocolTypeError):
         client.authorize()
 
     
@@ -35,5 +35,5 @@ def test_authorization_wrong_protocol_version(mock_client):
     pkt6.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value
     recv_queue.put(pkt6.pack())
 
-    with pytest.raises(protocol.ProtocolVersionException):
+    with pytest.raises(protocol.WrongProtocolVersionError):
         client.authorize()

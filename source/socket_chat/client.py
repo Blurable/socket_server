@@ -44,7 +44,6 @@ class Client:
         hdr_bytes = b''
 
         hdr_bytes += self.server.recv(hdr_len)
-        self.server.settimeout(5)
         while len(hdr_bytes) < hdr_len:
             hdr_bytes += self.server.recv(hdr_len - len(hdr_bytes))
         hdr = protocol.chat_header()
@@ -54,7 +53,6 @@ class Client:
         payload = b''
         while len(payload) < payload_len:
             payload += self.server.recv(payload_len - len(payload))
-        self.server.settimeout(None)
         
         return hdr, payload
         
@@ -82,11 +80,11 @@ class Client:
                         case protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
                             print("[*]Username is already taken, try again")
                         case protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
-                            raise protocol.ProtocolVersionException("[*]Protocol version is out of date.")
+                            raise protocol.WrongProtocolVersionError("[*]Protocol version is out of date.")
                         case _:
-                            raise protocol.ProtocolTypeException("[-]Wrong connection type during authorize")
+                            raise protocol.WrongProtocolTypeError("[-]Wrong connection type during authorize")
                 else:
-                    raise protocol.ProtocolTypeException("[-]Wrong msg type during authorize")
+                    raise protocol.WrongProtocolTypeError("[-]Wrong msg type during authorize")
             else:
                 print("[*]Username is not valid, try again")    
 
@@ -98,7 +96,7 @@ class Client:
                 pkt.unpack(payload)
                 self.handle_msg(pkt)
             case _:
-                raise protocol.ProtocolTypeException(f"[-]Unexpected type {hdr.msg_type} while handling the msg")
+                raise protocol.WrongProtocolTypeError(f"[-]Unexpected type {hdr.msg_type} while handling the msg")
 
 
     def handle_msg(self, pkt: protocol.chat_msg):

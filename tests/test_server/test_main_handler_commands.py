@@ -32,6 +32,6 @@ def test_wrong_command(mock_client_handler):
     pkt = protocol.chat_command()
     pkt.comm_type = None
     
-    with pytest.raises(protocol.ProtocolTypeException):
+    with pytest.raises(protocol.WrongProtocolTypeError):
         client.handle_command(pkt)
 

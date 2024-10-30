@@ -20,7 +20,7 @@ def mock_client():
         if not buffer and not buffer_queue.empty():
             buffer += buffer_queue.get()
         if bufsize and not buffer:
-            return ValueError
+            raise ValueError
             
         chunk = buffer[ : bufsize]
         buffer = buffer[bufsize : ]
