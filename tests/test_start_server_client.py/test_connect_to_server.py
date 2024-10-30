@@ -1,4 +1,6 @@
 import pytest
+import errno
+import time
 
 
 def test_connection_error(test_client):
@@ -7,7 +9,7 @@ def test_connection_error(test_client):
 
 
 def test_authorization_error(test_server, test_client):
-    server, _, _ = test_server
+    server, _, _, _ = test_server
     client, input_queue = test_client
 
     assert client.server != None
@@ -23,8 +25,8 @@ def test_authorization_error(test_server, test_client):
 
 
 def test_connect_to_server_add_client(test_server, test_client):
-    server, add_q, del_q = test_server
-    client, input_q = test_client
+    server, add_q, _, _ = test_server
+    _, input_q = test_client
 
     username = 'User'
     input_q.put(username)
@@ -36,7 +38,7 @@ def test_connect_to_server_add_client(test_server, test_client):
 
 
 def test_disconnect_from_server_remove_client(test_client, test_server):
-    server, add_q, del_q = test_server
+    server, add_q, del_q, _ = test_server
     client, input_q = test_client
 
     username = 'User'

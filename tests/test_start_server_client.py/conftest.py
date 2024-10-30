@@ -31,9 +31,10 @@ def test_server():
     with patch.object(ThreadSafeDict, 'add_if_not_exists', new=new_add), \
          patch.object(ThreadSafeDict, '__delitem__', new=new_delitem):
         server = Server(54321)
-        threading.Thread(target=server.start_server, daemon=True).start()
+        server_thread = threading.Thread(target=server.start_server, daemon=True)
+        server_thread.start()
         sleep(0.5)
-        yield server, added_clients, removed_clients
+        yield server, added_clients, removed_clients, server_thread
     if server:
         server.server_socket.close()
         sleep(0.5)

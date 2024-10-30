@@ -5,15 +5,17 @@ def bytes_limit(bytes_num):
     return 2**(8*bytes_num)-1
 
 
+class InvalidUsernameError(Exception):
+    def __init__(self, message='Invalid username'):
+        super().__init__(message)
+
 class WrongProtocolVersionError(Exception):
-    def __init__(self, message='Incorrect Version Type'):
-        self.message = message
-        super().__init__(self.message)
+    def __init__(self, message='Wrong protocol version'):
+        super().__init__(message)
 
 class WrongProtocolTypeError(Exception):
-    def __init__(self, message='Incorrect Type'):
-        self.message = message
-        super().__init__(self.message)
+    def __init__(self, message='Wrong protocol type'):
+        super().__init__(message)
 
 class SERVER_CONFIG:
     CURRENT_VERSION = '1.0.0'
@@ -74,18 +76,19 @@ class chat_connect:
         self.protocol_version = SERVER_CONFIG.CURRENT_VERSION
         self.username = ""
 
-
-    def username_validation(self, username: str):
+    @staticmethod
+    def __username_validation(username: str):
         if username.isidentifier() and username.lower() not in SERVER_CONFIG.RESTRICTED_USERNAMES:
-            self.username = username
             return True
         return False
         
 
     def pack(self) -> bytes:
         if len(self.username) > bytes_limit(self.USERNAME_LEN_FIELD_SIZE) or \
-           len(self.protocol_version) > bytes_limit(self.PROTOCOL_VERSION_LEN_FIELD_SIZE):
-            raise ValueError
+            not self.__username_validation(self.username):
+           raise InvalidUsernameError
+        if len(self.protocol_version) > bytes_limit(self.PROTOCOL_VERSION_LEN_FIELD_SIZE):
+            raise WrongProtocolVersionError
         
         self.hdr.msg_len = len(self.protocol_version) + self.PROTOCOL_VERSION_LEN_FIELD_SIZE + len(self.username) + self.USERNAME_LEN_FIELD_SIZE
         return self.hdr.pack() + len(self.protocol_version).to_bytes(self.PROTOCOL_VERSION_LEN_FIELD_SIZE, "little") + self.protocol_version.encode() + \
@@ -103,6 +106,8 @@ class chat_connect:
         username_len = int.from_bytes(payload[begin : begin+self.USERNAME_LEN_FIELD_SIZE], "little")
         begin += self.USERNAME_LEN_FIELD_SIZE
         self.username = payload[begin : begin+username_len].decode()
+        if not self.__username_validation(self.username):
+            raise InvalidUsernameError
 
 
 class chat_connack:

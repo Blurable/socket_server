@@ -7,14 +7,14 @@ def connect():
     return connect
 
 
-@pytest.mark.parametrize('username, protocol_version_length', [
-                        ('1'*256, '1'),
-                        ('1', '1'*256)
+@pytest.mark.parametrize('username, protocol_version_length, error', [
+                        ('1'*256, '1', protocol.InvalidUsernameError),
+                        ('Normal_username', '1'*256, protocol.WrongProtocolVersionError)
                         ])
-def test_pack_failure(connect, username, protocol_version_length):
+def test_pack_length_errors(connect, username, protocol_version_length, error):
     connect.username = username
     connect.protocol_version = protocol_version_length
-    with pytest.raises(ValueError):
+    with pytest.raises(error):
         assert connect.pack()
 
 
@@ -28,3 +28,21 @@ def test_connect_pack_unpack(connect):
     
     assert test_connect.username == connect.username == 'Artyom'
     assert test_connect.protocol_version == connect.protocol_version == protocol.SERVER_CONFIG.CURRENT_VERSION
+
+
+@pytest.mark.parametrize('username', [(username) for username in protocol.SERVER_CONFIG.KEYWORDS])
+def test_connect_pack_errors(connect, username):
+    connect.username = username
+    
+    with pytest.raises(protocol.InvalidUsernameError):
+        connect.pack()
+
+@pytest.mark.parametrize('username', [(username) for username in protocol.SERVER_CONFIG.KEYWORDS])
+def test_connect_unpack_errors(connect, username):
+    connect.username = username
+    payload = len(connect.protocol_version).to_bytes(connect.PROTOCOL_VERSION_LEN_FIELD_SIZE, "little") + connect.protocol_version.encode() + \
+              len(connect.username).to_bytes(connect.USERNAME_LEN_FIELD_SIZE, "little") + connect.username.encode()
+    
+    with pytest.raises(protocol.InvalidUsernameError):
+        connect.unpack(payload)
+

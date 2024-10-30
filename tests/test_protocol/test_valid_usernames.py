@@ -25,8 +25,8 @@ import socket_chat.protocol as protocol
 
 ])
 def test_client_usernames(username, flag_status):
-    conn = protocol.chat_connect()
-    assert conn.username_validation(username) == flag_status
+    obj = protocol.chat_connect()
+    assert obj._chat_connect__username_validation(username) == flag_status
 
 
     

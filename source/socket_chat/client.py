@@ -66,27 +66,29 @@ class Client:
         while self.server.is_active:
             username = self.wrap_input("[*]Please enter your username (must contain only letters):")
             conn = protocol.chat_connect()
-            if conn.username_validation(username):
+            conn.username = username
+            try:
                 self.server.send(conn.pack())
+            except protocol.InvalidUsernameError:
+                print("[*]Username is not valid, try again")
+                continue    
 
-                hdr, payload = self.recv_pkt()
-                if hdr.msg_type == protocol.MSG_TYPE.CHAT_CONNACK.value:
-                    pkt = protocol.chat_connack()
-                    pkt.unpack(payload)
-                    match pkt.conn_type:
-                        case protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value:
-                            self.username = username
-                            break
-                        case protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
-                            print("[*]Username is already taken, try again")
-                        case protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
-                            raise protocol.WrongProtocolVersionError("[-]Protocol version is out of date.")
-                        case _:
-                            raise protocol.WrongProtocolTypeError("[-]Wrong connection type during authorize")
-                else:
-                    raise protocol.WrongProtocolTypeError("[-]Wrong msg type during authorize")
+            hdr, payload = self.recv_pkt()
+            if hdr.msg_type == protocol.MSG_TYPE.CHAT_CONNACK.value:
+                pkt = protocol.chat_connack()
+                pkt.unpack(payload)
+                match pkt.conn_type:
+                    case protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value:
+                        self.username = username
+                        break
+                    case protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
+                        print("[*]Username is already taken, try again")
+                    case protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
+                        raise protocol.WrongProtocolVersionError("[-]Protocol version is out of date.")
+                    case _:
+                        raise protocol.WrongProtocolTypeError("[-]Wrong connection type during authorize")
             else:
-                print("[*]Username is not valid, try again")    
+                raise protocol.WrongProtocolTypeError("[-]Wrong msg type during authorize")
 
 
     def handle(self, hdr, payload):

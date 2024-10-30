@@ -1,5 +1,6 @@
 import socket
 import threading
+import errno
 
 from socket_chat.tsdict import ThreadSafeDict
 from socket_chat.connection import Connection
@@ -12,7 +13,6 @@ class Server:
         self.addr = (self.host_ip, self.host_port)
         self.clients = ThreadSafeDict()
         self.server_socket: socket.socket = None
-        self.is_active = True
 
 
     def start_server(self):
@@ -20,31 +20,29 @@ class Server:
         try:
             self.server_socket.bind(self.addr)
             self.server_socket.listen()
-            print('[*]Server is listening...\n')
-            self.accept_clients()
         except Exception as e:
             print(f'[-]Error while starting the server: {e}')
             self.server_socket.close()
-            self.is_active = False
+            raise
+        print('[*]Server is listening...\n')
+        self.accept_clients()
 
 
     def accept_clients(self):
-        while self.is_active:
+        while True:
             try:
                 client_socket, client_addr = self.server_socket.accept()
                 print(f"[*]Accepted connection from {client_addr[0]}:{client_addr[1]}")
                 handler = ClientHandler(Connection(client_socket), self.clients)
                 threading.Thread(target=handler.run, daemon=True).start()
             except socket.error as e:
-                if e.errno == 10038:
-                    print(f'[-]Server socket was closed')
-                    self.is_active = False
+                if e.errno == errno.WSAENOTSOCK:
+                    print(f'[-]Server socket was closed while accepting clients')
+                    raise
                 else:
-                    print(f'[-]Socket error while accepting the client: {e}')
-                    if client_socket:
-                        client_socket.close()
+                    print(f'[-]Socket error while accepting clients: {e}')
             except Exception as e:
-                print(f'[-]Exception error while accepting the client: {e}')
+                print(f'[-]Exception error while accepting clients: {e}')
                 if client_socket:
                     client_socket.close()
                 
@@ -116,13 +114,12 @@ class ClientHandler:
             self.client.send(reply.pack())
             raise protocol.WrongProtocolVersionError('[-]Wrong protocol version')
 
-        if pkt.username_validation(pkt.username):
-            if self.clients.add_if_not_exists(pkt.username, self.client):
-                print(f"[*]{pkt.username} has connected to the server")
-                reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value
-                self.username = pkt.username
-                self.client.send(reply.pack())
-                return
+        if self.clients.add_if_not_exists(pkt.username, self.client):
+            print(f"[*]{pkt.username} has connected to the server")
+            reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value
+            self.username = pkt.username
+            self.client.send(reply.pack())
+            return
 
         reply.conn_type = protocol.chat_connack.CONN_TYPE.CONN_RETRY.value
         self.client.send(reply.pack())

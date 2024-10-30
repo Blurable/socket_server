@@ -14,6 +14,7 @@ def get_test_data():
     pkt4 = protocol.chat_disconnect()
     
     pkt5 = protocol.chat_connect()
+    pkt5.username = 'Baho'
 
     return [(pkt1.pack()), (pkt2.pack()), (pkt3), (pkt4.pack()), (pkt5.pack())]
 

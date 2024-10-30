@@ -6,7 +6,7 @@ import time
 
 @pytest.mark.parametrize('recv_val', [(b'\x01'), (b'111'), (b'0')])
 def test_timeout(test_server, recv_val):
-    server, add_q, del_q = test_server
+    server, add_q, del_q, _ = test_server
 
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(server.addr)
