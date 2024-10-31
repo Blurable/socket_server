@@ -69,21 +69,20 @@ class Client:
                 continue    
 
             hdr, payload = self.recv_pkt()
-            if hdr.msg_type == protocol.MSG_TYPE.CHAT_CONNACK.value:
-                pkt = protocol.chat_connack()
-                pkt.unpack(payload)
-                match pkt.conn_type:
-                    case protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value:
-                        self.username = username
-                        break
-                    case protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
-                        print("[*]Username is already taken, try again")
-                    case protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
-                        raise protocol.WrongProtocolVersionError("[-]Protocol version is out of date.")
-                    case _:
-                        raise protocol.WrongProtocolTypeError("[-]Wrong connection type during authorize")
-            else:
+            if hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNACK.value:
                 raise protocol.WrongProtocolTypeError("[-]Wrong msg type during authorize")
+            pkt = protocol.chat_connack()
+            pkt.unpack(payload)
+            match pkt.conn_type:
+                case protocol.chat_connack.CONN_TYPE.CONN_ACCEPTED.value:
+                    self.username = username
+                    break
+                case protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
+                    print("[*]Username is already taken, try again")
+                case protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
+                    raise protocol.WrongProtocolVersionError("[-]Protocol version is out of date.")
+                case _:
+                    raise protocol.WrongProtocolTypeError("[-]Wrong connection type during authorize")
 
 
     def handle(self, hdr, payload):
