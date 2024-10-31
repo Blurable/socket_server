@@ -57,14 +57,9 @@ class Client:
         return hdr, payload
         
 
-    def wrap_input(self, input_msg: str):
-        msg = input(input_msg)
-        return msg
-
-
     def authorize(self):
         while self.server.is_active:
-            username = self.wrap_input("[*]Please enter your username (must contain only letters):")
+            username = input("[*]Please enter your username (must contain only letters):")
             conn = protocol.chat_connect()
             conn.username = username
             try:
@@ -116,7 +111,7 @@ class Client:
         try:
             while self.server.is_active:
                 channel = self.cur_channel if self.cur_channel else "all"
-                msg = self.wrap_input(f"[/{channel}]:")
+                msg = input(f"[/{channel}]:")
                 match msg.lower():
                     case '/quit':
                         pkt = protocol.chat_disconnect()

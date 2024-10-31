@@ -1,6 +1,5 @@
 import socket
 import threading
-import errno
 
 from socket_chat.tsdict import ThreadSafeDict
 from socket_chat.connection import Connection
@@ -36,7 +35,7 @@ class Server:
                 handler = ClientHandler(Connection(client_socket), self.clients)
                 threading.Thread(target=handler.run, daemon=True).start()
             except socket.error as e:
-                if e.errno == errno.WSAENOTSOCK:
+                if e.errno == socket.errno.WSAENOTSOCK:
                     print(f'[-]Server socket was closed while accepting clients')
                     raise
                 else:
