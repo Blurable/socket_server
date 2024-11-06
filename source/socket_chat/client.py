@@ -1,6 +1,8 @@
 import re
 import socket
-import threading
+import asyncio
+from aioconsole import ainput
+import logging
 
 from socket_chat.connection import Connection
 import socket_chat.protocol as protocol
@@ -8,67 +10,55 @@ import socket_chat.protocol as protocol
 
 class Client:
     def __init__(self, server_port, server_ip = socket.gethostbyname(socket.gethostname())):
-        self.serv_addr = (server_ip, server_port)
-
+        self.logger = logging.getLogger(__name__)
+        self.port = server_port
+        self.host = server_ip
         self.sock: socket.socket = None
-        self.server: Connection = None
+        self.connection: Connection = None
         self.username: str = ""
         self.cur_channel: str = ""
 
 
-    def connect_to_server(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    async def connect_to_server(self):
         try:
-            self.sock.connect(self.serv_addr)      
+            reader, writer = await asyncio.open_connection(self.host, self.port)     
         except Exception as e:
-            print(f'Error while connecting to server: {e}')
-            self.sock.close()
+            self.logger.exception(f'Error while connecting to server: {e}')
             return
-        self.server = Connection(self.sock)
-
-        try:
-            self.authorize()
-        except Exception as e:
-            print(f'Error while authorizing: {e}')
-            self.server.close()
-            return
-        print("[*]Authorized!")
-        print(self.info())
-
-        threading.Thread(target=self.receiver, daemon=True).start()
-        self.sender()
+        self.logger.info("[*]Successfull connection to the server")
+        self.connection = Connection(reader, writer)
 
         
-    def recv_pkt(self):
+    async def recv_pkt(self):
         hdr_len = protocol.chat_header.PKT_TYPE_FIELD_SIZE + protocol.chat_header.PKT_LEN_FIELD_SIZE
         hdr_bytes = b''
 
-        hdr_bytes += self.server.recv(hdr_len)
+        hdr_bytes += await self.connection.recv(hdr_len)
         while len(hdr_bytes) < hdr_len:
-            hdr_bytes += self.server.recv(hdr_len - len(hdr_bytes))
+            hdr_bytes += await self.connection.recv(hdr_len - len(hdr_bytes))
         hdr = protocol.chat_header()
         hdr.unpack(hdr_bytes)
 
         payload_len = hdr.msg_len
         payload = b''
         while len(payload) < payload_len:
-            payload += self.server.recv(payload_len - len(payload))
+            payload += await self.connection.recv(payload_len - len(payload))
         
         return hdr, payload
         
 
-    def authorize(self):
-        while self.server.is_active:
-            username = input("[*]Please enter your username (must contain only letters):")
+    async def authorize(self):
+        while self.connection.is_active:
+            username = await ainput("[*]Please enter your username (must contain only letters):")
             conn = protocol.chat_connect()
             conn.username = username
             try:
-                self.server.send(conn.pack())
+                await self.connection.send(conn.pack())
             except protocol.InvalidUsernameError:
-                print("[*]Username is not valid, try again")
+                self.logger.error(f"[*]Username {username} is not valid, try again")
                 continue    
 
-            hdr, payload = self.recv_pkt()
+            hdr, payload = await self.recv_pkt()
             if hdr.msg_type != protocol.MSG_TYPE.CHAT_CONNACK.value:
                 raise protocol.WrongProtocolTypeError("[-]Wrong msg type during authorize")
             pkt = protocol.chat_connack()
@@ -78,7 +68,7 @@ class Client:
                     self.username = username
                     break
                 case protocol.chat_connack.CONN_TYPE.CONN_RETRY.value:
-                    print("[*]Username is already taken, try again")
+                    self.logger.error(f"[*]Username {username} is already taken, try again")
                 case protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value:
                     raise protocol.WrongProtocolVersionError("[-]Protocol version is out of date.")
                 case _:
@@ -106,23 +96,23 @@ class Client:
         return info
 
 
-    def sender(self):
+    async def sender(self):
         try:
-            while self.server.is_active:
+            while self.connection.is_active:
                 channel = self.cur_channel if self.cur_channel else "all"
-                msg = input(f"[/{channel}]:")
+                msg = await ainput(f"[/{channel}]:")
                 match msg.lower():
                     case '/quit':
                         pkt = protocol.chat_disconnect()
-                        self.server.send(pkt.pack())
-                        print('[*]Quitting chat')
-                        self.server.close()
+                        await self.connection.send(pkt.pack())
+                        self.logger.info('[*]Quitting chat')
+                        await self.connection.close()
                     case '/info':
-                        print(self.info())
+                        self.logger.debug(self.info())
                     case '/members':
                         pkt = protocol.chat_command()
                         pkt.comm_type = pkt.COMM_TYPE.COMM_MEMBERS.value
-                        self.server.send(pkt.pack())
+                        await self.connection.send(pkt.pack())
                     case '/all':
                         self.cur_channel = ""
                     case _ if re.fullmatch(r'^/[a-zA-Z_][a-zA-Z0-9_]*$', msg):
@@ -132,17 +122,36 @@ class Client:
                         pkt.src = self.username
                         pkt.dst = self.cur_channel
                         pkt.msg = msg
-                        self.server.send(pkt.pack())
+                        await self.connection.send(pkt.pack())
         except Exception as e:
             print(f'Error in sender: {e}')
-            self.server.close()
+            await self.connection.close()
             
 
-    def receiver(self):
+    async def receiver(self):
         try:
-            while self.server.is_active:
-                hdr, payload = self.recv_pkt()
+            while self.connection.is_active:
+                hdr, payload = await self.recv_pkt()
                 self.handle(hdr, payload)
         except Exception as e:
-            print(f'[-]Error in receiver: {e}')
-            self.server.close()
+            self.logger.exception(f'[-]Error in receiver: {e}')
+            await self.connection.close()
+
+
+    async def start_client(self):
+        await self.connect_to_server()
+        
+        try:
+            await self.authorize()
+        except Exception as e:
+            self.logger.exception(f'Error while authorizing: {e}')
+            self.connection.close()
+            return
+        self.logger.info("[*]Authorized!")
+        self.logger.debug(self.info())
+
+        receive_task = asyncio.create_task(self.receiver())
+        send_task = asyncio.create_task(self.sender())
+        done, pending = await asyncio.wait({receive_task, send_task}, return_when=asyncio.FIRST_COMPLETED)
+        for task in pending:
+            task.cancel()

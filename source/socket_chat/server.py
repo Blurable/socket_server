@@ -1,6 +1,6 @@
 import socket
 import asyncio
-import logging.config
+import logging
 from socket_chat.connection import Connection
 import socket_chat.protocol as protocol
 
@@ -21,13 +21,18 @@ class Server:
             self.logger.exception(f'[-]Error while starting the server: {e}')
             self.server.close()
             raise
-        self.logger.info('[*]Server is listening...\n')
-        await self.server.serve_forever()
+        async with self.server:
+            self.logger.info('[*]Server is listening...\n')
+            await self.server.serve_forever()
 
     
     async def client_handler(self, client_reader, client_writer):
         handler = ClientHandler(Connection(client_reader, client_writer), self.clients)
-        await handler.run()
+        self.logger.info(f'[*]Accepted connection from {client_writer.get_extra_info('peername')}')
+        try:
+            await handler.run()
+        except:
+            pass
 
 
 class ClientHandler:
@@ -43,10 +48,10 @@ class ClientHandler:
         try:
             while self.client.is_active:
                 hdr, payload = await self.recv_pkt()
-                self.handle_pkt(hdr, payload)
+                await self.handle_pkt(hdr, payload)
         except Exception as e:
-            self.logger.exception(f'[-]Error: {e}')
-            self.shutdown()
+            self.logger.error(f'[-]Error: {e}')
+            await self.shutdown()
 
 
     async def recv_pkt(self):

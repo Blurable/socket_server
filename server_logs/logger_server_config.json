@@ -16,14 +16,14 @@
             "class": "logging.FileHandler",
             "formatter": "standard",
             "level": "INFO",
-            "filename": "client_server_info.log",
+            "filename": "server_logs\\server_info.log",
             "mode": "w"
         },
         "server_errors": {
             "class": "logging.FileHandler",
             "formatter": "standard",
             "level": "ERROR",
-            "filename": "server_errors.log",
+            "filename": "server_logs\\server_errors.log",
             "mode": "w"
         }
     },

@@ -45,6 +45,6 @@ def mock_client():
     mock_socket.settimeout.side_effect = mock_settimeout
     with patch('builtins.input', side_effect=mock_input):
         client = Client(server_port=54321)
-        client.server = mock_socket
+        client.connection = mock_socket
 
         yield client, buffer_queue, input_queue, send_queue

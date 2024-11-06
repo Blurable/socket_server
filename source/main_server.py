@@ -10,7 +10,7 @@ async def main():
 
 
 if __name__ == '__main__':
-    with open('logger_config.json', 'r') as f:
+    with open('server_logs\\logger_server_config.json', 'r') as f:
         config = json.load(f)
         logging.config.dictConfig(config)
         logger = logging.getLogger(__name__)
