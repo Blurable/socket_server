@@ -11,7 +11,7 @@ class Server:
         self.host_ip = host_ip
         self.addr = (self.host_ip, self.host_port)
         self.clients: dict = {}
-        self.server_socket: socket.socket = None
+        self.server: asyncio.base_events.Server = None
 
 
     async def start_server(self):
@@ -19,7 +19,6 @@ class Server:
             self.server = await asyncio.start_server(self.client_handler, self.host_ip, self.host_port)
         except Exception as e:
             self.logger.exception(f'[-]Error while starting the server: {e}')
-            self.server.close()
             raise
         async with self.server:
             self.logger.info('[*]Server is listening...\n')
@@ -31,8 +30,8 @@ class Server:
         self.logger.info(f'[*]Accepted connection from {client_writer.get_extra_info('peername')}')
         try:
             await handler.run()
-        except:
-            pass
+        except Exception as e:
+            self.logger.error(f'[-]Error: {e} while handling the client {client_writer.get_extra_info('peername')}')
 
 
 class ClientHandler:
@@ -52,6 +51,7 @@ class ClientHandler:
         except Exception as e:
             self.logger.error(f'[-]Error: {e}')
             await self.shutdown()
+            raise
 
 
     async def recv_pkt(self):
