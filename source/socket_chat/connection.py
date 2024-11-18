@@ -14,6 +14,11 @@ class Connection:
         self.is_active = True
 
 
+    @property
+    def addr(self):
+        return self.writer.get_extra_info('peername')
+
+
     async def send(self, msg: bytes):
         self.writer.write(msg)
         await self.writer.drain()
@@ -37,4 +42,4 @@ class Connection:
             self.writer.close()
             await self.writer.wait_closed()
         except Exception as e:
-            self.logger.error('Socket was already closed.')
+            self.logger.error(f'Socket was already closed. socket={self.addr},\n {e}')

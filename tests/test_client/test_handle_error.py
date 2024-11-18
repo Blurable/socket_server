@@ -19,10 +19,11 @@ def get_test_data():
     return [(pkt1.pack()), (pkt2.pack()), (pkt3), (pkt4.pack()), (pkt5.pack())]
 
 @pytest.mark.parametrize('recv', get_test_data())
-def test_handle_error(mock_client, recv):
+@pytest.mark.asyncio
+async def test_handle_error(mock_client, recv):
     client, recv_queue, _, _ = mock_client
     
-    recv_queue.put(recv)
+    await recv_queue.put(recv)
     with pytest.raises(protocol.WrongProtocolTypeError):
-        hdr, payload = client.recv_pkt()
-        client.handle(hdr, payload)
+        hdr, payload = await client.recv_pkt()
+        await client.handle(hdr, payload)

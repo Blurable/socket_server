@@ -1,6 +1,5 @@
 import pytest
 import socket_chat.protocol as protocol
-import threading
 
 
 def get_test_data():
@@ -16,12 +15,13 @@ def get_test_data():
 
 
 @pytest.mark.parametrize('input, send', get_test_data())
-def test_sender_commands(mock_client, input, send):
+@pytest.mark.asyncio
+async def test_sender_commands(mock_client, input, send):
     client, _, input_queue, send_queue = mock_client
 
-    input_queue.put(input)
-    input_queue.put(ValueError())
+    await input_queue.put(input)
+    await input_queue.put(ValueError())
 
-    client.sender()
+    await client.sender()
     
-    assert send_queue.get() == send.pack()
+    assert await send_queue.get() == send.pack()

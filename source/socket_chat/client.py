@@ -145,8 +145,9 @@ class Client:
             await self.authorize()
         except Exception as e:
             self.logger.exception(f'Error while authorizing: {e}')
-            self.connection.close()
+            await self.connection.close()
             return
+        
         self.logger.info("[*]Authorized!")
         self.logger.debug(self.info())
 

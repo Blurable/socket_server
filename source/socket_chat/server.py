@@ -26,12 +26,13 @@ class Server:
 
     
     async def client_handler(self, client_reader, client_writer):
-        handler = ClientHandler(Connection(client_reader, client_writer), self.clients)
-        self.logger.info(f'[*]Accepted connection from {client_writer.get_extra_info('peername')}')
+        client = Connection(client_reader, client_writer)
+        handler = ClientHandler(client, self.clients)
+        self.logger.info(f'[*]Accepted connection from {client.addr}')
         try:
             await handler.run()
         except Exception as e:
-            self.logger.error(f'[-]Error: {e} while handling the client {client_writer.get_extra_info('peername')}')
+            self.logger.error(f'[-]Error: {e} while handling the client {client.addr}')
 
 
 class ClientHandler:
@@ -49,7 +50,7 @@ class ClientHandler:
                 hdr, payload = await self.recv_pkt()
                 await self.handle_pkt(hdr, payload)
         except Exception as e:
-            self.logger.error(f'[-]Error: {e}')
+            self.logger.error(f'[-]Error: {e}. cur_client = {self.client.addr}')
             await self.shutdown()
             raise
 
@@ -122,14 +123,16 @@ class ClientHandler:
                 fail_pkt.src = protocol.SERVER_CONFIG.SERVER_NAME
                 fail_pkt.dst = self.username
                 fail_pkt.msg = f"{pkt.dst} is offline"
-                await self.client.send(fail_pkt.pack())
+                try:
+                    await self.client.send(fail_pkt.pack())
+                except Exception as e:
+                    self.logger.error(f'Error {e} while handling msg, current client has disconnected. cur_client = {self.client.addr}')
             else:
                 receiver = self.clients[pkt.dst]
                 try:
                     await receiver.send(pkt.pack())
                 except Exception as e:
-                    self.logger.exception(f'Error {e} inside handle_msg')
-                    pass
+                    self.logger.error(f'Error {e} while handling msg, receiver has disconnected. cur_client = {self.client.addr}')
         else:
             await self.broadcast(pkt.pack())
 
@@ -157,7 +160,7 @@ class ClientHandler:
             try:
                 await client.send(msg)
             except Exception as e:
-                self.logger.exception(f'[-]Error while broadcasting a message to {client}: {e}')
+                self.logger.error(f'[-]Error while broadcasting a message to {client}: {e}')
 
 
     async def shutdown(self):
