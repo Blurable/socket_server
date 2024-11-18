@@ -17,23 +17,24 @@ def get_test_data():
 
 
 @pytest.mark.parametrize('recv', get_test_data())
-def test_authorization_wrong_type(mock_client, recv):
+@pytest.mark.asyncio
+async def test_authorization_wrong_type(mock_client, recv):
     client, recv_queue, input_queue, _ = mock_client
 
-    input_queue.put('Baho')
-    recv_queue.put(recv)
+    await input_queue.put('Baho')
+    await recv_queue.put(recv)
     with pytest.raises(protocol.WrongProtocolTypeError):
-        client.authorize()
+        await client.authorize()
 
-    
-def test_authorization_wrong_protocol_version(mock_client):
+@pytest.mark.asyncio  
+async def test_authorization_wrong_protocol_version(mock_client):
     client, recv_queue, input_queue, _ = mock_client
 
-    input_queue.put('Baho')
+    await input_queue.put('Baho')
 
-    pkt = protocol.chat_connack()
-    pkt.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value
-    recv_queue.put(pkt.pack())
+    pkt6 = protocol.chat_connack()
+    pkt6.conn_type = protocol.chat_connack.CONN_TYPE.WRONG_PROTOCOL_VERSION.value
+    await recv_queue.put(pkt6.pack())
 
     with pytest.raises(protocol.WrongProtocolVersionError):
-        client.authorize()
+        await client.authorize()

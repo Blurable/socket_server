@@ -1,0 +1,36 @@
+{
+    "version": 1,
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+            "level": "DEBUG",
+            "stream": "ext://sys.stdout"
+        },
+        "server_info": {
+            "class": "logging.FileHandler",
+            "formatter": "standard",
+            "level": "INFO",
+            "filename": "server_logs\\server_info.log",
+            "mode": "w"
+        },
+        "server_errors": {
+            "class": "logging.FileHandler",
+            "formatter": "standard",
+            "level": "ERROR",
+            "filename": "server_logs\\server_errors.log",
+            "mode": "w"
+        }
+    },
+    "loggers": {
+        "": {
+            "level": "DEBUG",
+            "handlers": ["console", "server_info", "server_errors"]
+            }
+    }
+}

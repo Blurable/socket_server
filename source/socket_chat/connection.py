@@ -1,33 +1,45 @@
-import threading
 import socket
+import asyncio
+import logging
 
+class ConnectionTimedOutError(Exception):
+    pass
 
 class Connection:
 
-    def __init__(self, sock: socket.socket):
-        self.sock = sock
-        sock.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 20000, 5000))
+    def __init__(self, client_reader: asyncio.StreamReader, client_writer: asyncio.StreamWriter):
+        self.logger = logging.getLogger(__name__)
+        self.reader = client_reader
+        self.writer = client_writer
         self.is_active = True
 
-        self.sendLock = threading.Lock()
+
+    @property
+    def addr(self):
+        return self.writer.get_extra_info('peername')
 
 
-    def send(self, msg: bytes):
-        with self.sendLock:
-            self.sock.sendall(msg)
+    async def send(self, msg: bytes):
+        self.writer.write(msg)
+        await self.writer.drain()
 
 
-    def recv(self, len: int) -> bytes:
-        msg = self.sock.recv(len)
-        if not msg:
-            raise socket.error
-        return msg
+    async def recv(self, len: int, timeout=None) -> bytes:
+        try:
+            msg = await asyncio.wait_for(self.reader.read(len), timeout)
+            if not msg:
+                raise ConnectionResetError
+            return msg
+        except TimeoutError:
+            raise ConnectionTimedOutError
+        except Exception:
+            raise ConnectionResetError
     
 
-    def close(self):
+    async def close(self):
         self.is_active = False
-        self.sock.close()
-
-
-    def settimeout(self, time):
-        self.sock.settimeout(time)
+        try:
+            self.writer.close()
+            await self.writer.wait_closed()
+        except Exception as e:
+            self.logger.error(f'Socket was already closed. socket={self.addr},\n {e}')

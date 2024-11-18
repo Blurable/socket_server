@@ -1,37 +1,46 @@
 import pytest
 import socket_chat.protocol as protocol
-from socket_chat.tsdict import ThreadSafeDict
-
-@pytest.mark.parametrize('clients, msg', [(False, 'You are alone in the chat'),
-                                          (True, 'Dummy\nArtyom')] )
-def test_main_handler_members_with_users(mock_client_handler, clients, msg):
-    client, buffer_queue, send_queue = mock_client_handler
-    
-    if not clients:
-        client.clients = ThreadSafeDict()
-    client.username = 'Artyom'
-    client.clients.add_if_not_exists(client.username, client.client)
-
-    rcv_msg = protocol.chat_command()
-    rcv_msg.comm_type = rcv_msg.COMM_TYPE.COMM_MEMBERS.value
-    buffer_queue.put(rcv_msg.pack())
-
-    hdr, payload = client.recv_pkt()
-    client.handle_pkt(hdr, payload)
-
-    snd_msg = protocol.chat_msg()
-    snd_msg.src = protocol.SERVER_CONFIG.SERVER_NAME
-    snd_msg.dst = client.username
-    snd_msg.msg = msg
-
-    assert snd_msg.pack() == send_queue.get()
+from unittest.mock import patch, AsyncMock
 
 
-def test_wrong_command(mock_client_handler):
-    client, _, _ = mock_client_handler
-    pkt = protocol.chat_command()
-    pkt.comm_type = None
-    
+def get_test_handler_command_data():
+    command = protocol.chat_command()
+    command.comm_type = command.COMM_TYPE.COMM_MEMBERS.value
+    msg = protocol.chat_msg()
+    client_username = 'Test_User'
+    fake_clients = ('Fake_User1', 'Fake_User2')  
+    cases = []
+
+    msg.msg = "You are alone in the chat"
+    msg.src = protocol.SERVER_CONFIG.SERVER_NAME
+    msg.dst = client_username
+    cases.append((command.pack(), client_username, None, msg.pack()))
+
+    msg.msg = "Fake_User1\nFake_User2"
+    cases.append((command.pack(), client_username, fake_clients, msg.pack()))
+
+    return cases
+
+
+@pytest.mark.parametrize('pkt, client_username, fake_clients, expected_msg', get_test_handler_command_data())
+@pytest.mark.asyncio
+async def test_handler_command(fake_recv, pkt, client_username, fake_clients, expected_msg, client_handler_fixture):
+    mocked_client = client_handler_fixture.client
+    client_handler_fixture.username = client_username
+    hdr, payload = fake_recv
+
+    if fake_clients:
+        for client in fake_clients:
+            client_handler_fixture.clients[client] = AsyncMock()
+
+    await client_handler_fixture.handle_pkt(hdr, payload)
+
+    mocked_client.send.assert_awaited_once_with(expected_msg)
+
+
+@pytest.mark.asyncio
+async def test_handler_command_error(client_handler_fixture):
+    command_pkt = protocol.chat_command()
+    command_pkt.comm_type = 'Error'
     with pytest.raises(protocol.WrongProtocolTypeError):
-        client.handle_command(pkt)
-
+        await client_handler_fixture.handle_command(command_pkt)

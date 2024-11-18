@@ -1,50 +1,46 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from socket_chat.client import Client
-from queue import Queue
+import asyncio
 
 
 @pytest.fixture
 def mock_client():
-    buffer_queue = Queue()
-    input_queue = Queue()
-    send_queue = Queue()
-    timeout = None
+    buffer_queue = asyncio.Queue()
+    input_queue = asyncio.Queue()
+    send_queue = asyncio.Queue()
 
-    mock_socket = MagicMock()
+    mock_connection = AsyncMock()
+    mock_logger = MagicMock()
 
     buffer = b''
-    def recv_side_effect(bufsize):
+    async def recv_side_effect(bufsize, timeout=2):
         nonlocal buffer_queue, buffer
 
-        if not buffer and not buffer_queue.empty():
-            buffer += buffer_queue.get()
         if bufsize and not buffer:
-            raise ValueError
+            buffer += await asyncio.wait_for(buffer_queue.get(), timeout)
             
         chunk = buffer[ : bufsize]
         buffer = buffer[bufsize : ]
         return chunk    
 
-    def mock_sendall(data):
+    async def mock_sendall(data):
         nonlocal send_queue
-        return send_queue.put(data)
+        return await send_queue.put(data)
     
-    def mock_input(prompt):
-        msg = input_queue.get()
+    async def mock_input(prompt):
+        msg = await input_queue.get()
         if isinstance(msg, Exception):
             raise msg
         return msg
        
-    def mock_settimeout(time):
-        nonlocal timeout
-        timeout = time
         
-    mock_socket.recv.side_effect = recv_side_effect
-    mock_socket.send.side_effect = mock_sendall
-    mock_socket.settimeout.side_effect = mock_settimeout
-    with patch('builtins.input', side_effect=mock_input):
+    mock_connection.recv.side_effect = recv_side_effect
+    mock_connection.send.side_effect = mock_sendall
+
+    with patch('socket_chat.client.ainput', side_effect=mock_input), \
+         patch('socket_chat.client.logging.getLogger', return_value=mock_logger):
         client = Client(server_port=54321)
-        client.server = mock_socket
+        client.connection = mock_connection
 
         yield client, buffer_queue, input_queue, send_queue

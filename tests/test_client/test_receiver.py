@@ -1,38 +1,38 @@
 import pytest
 import socket_chat.protocol as protocol
+import asyncio
 
-
-def test_client_receiver(mock_client):
+@pytest.mark.asyncio
+async def test_client_receiver(mock_client):
     client, buffer_queue, _, _ = mock_client
 
     msg = protocol.chat_msg()
     msg.src = 'Art'
     msg.dst = 'Tra'
     msg.msg = 'Hello'
-    buffer_queue.put(msg.pack())
-    client.receiver()
+    await buffer_queue.put(msg.pack())
+    await client.receiver()
 
-
-def test_client_recv_not_full_pkt(mock_client):
+@pytest.mark.asyncio
+async def test_client_recv_not_full_pkt(mock_client):
     client, buffer_queue, _, _ = mock_client
 
-    buffer_queue.put(b'\x01\x00')
-    try:
-        client.receiver()
-    except:
-        assert False
+    await buffer_queue.put(b'\x01\x00')
+    await client.receiver()
+    client.connection.close.assert_awaited_once()
 
 
-def test_recv_pkt(mock_client):
+@pytest.mark.asyncio
+async def test_recv_pkt(mock_client):
     client, buffer_q, _, _ = mock_client
     msg = protocol.chat_msg()
     msg.msg = 'Hello'
     msg.src = 'Asd'
     msg.dst = 'Dsa'
     packed_msg = msg.pack()
-    buffer_q.put(packed_msg)
+    await buffer_q.put(packed_msg)
 
-    hdr, payload = client.recv_pkt()
+    hdr, payload = await client.recv_pkt()
 
     test_hdr = protocol.chat_header()
     test_hdr.msg_type = protocol.MSG_TYPE.CHAT_MSG.value

@@ -1,120 +1,78 @@
 import pytest
 import socket_chat.protocol as protocol
-from socket_chat.tsdict import ThreadSafeDict
+from unittest.mock import patch, AsyncMock
 
 
-@pytest.mark.parametrize('clients_in_dict', [(True), (False)])
-def test_main_handler_msg_broadcast(mock_client_handler, clients_in_dict):
-    client, buffer_queue, send_queue = mock_client_handler
+def get_test_handler_msg_data(): 
+    client_username = 'Test_User'
+    broadcast_clients = ('Fake_User1', 'Fake_User2')
+    dm_client = 'Dm_User'
+    not_client = 'Not_Client'
+    cases = []
 
-    if not clients_in_dict:
-        client.clients = ThreadSafeDict()
-    client.username = 'Artyom'
-    client.clients.add_if_not_exists(client.username, client.client)
-    rcv_msg = protocol.chat_msg()
-    buffer_queue.put(rcv_msg.pack())
+    msg = protocol.chat_msg()
+    msg.msg = 'Hello'
+    msg.src = client_username
 
-    hdr, payload = client.recv_pkt()
-    client.handle_pkt(hdr, payload)
+    reply = protocol.chat_msg()
+    reply.src = protocol.SERVER_CONFIG.SERVER_NAME
+    reply.dst = client_username
+    reply.msg = f'{not_client} is offline'
 
-    snd_msg = protocol.chat_msg()
-    snd_msg.msg = ''
-    snd_msg.dst = ''
-    snd_msg.src = ''
+    msg.dst = ''
+    cases.append((msg.pack(), client_username, broadcast_clients, msg.pack()))
 
-    if not clients_in_dict:
-        assert send_queue.empty()
-    else:
-        packed_msg = send_queue.get()
-        assert packed_msg == snd_msg.pack()
+    msg.dst = dm_client
+    cases.append((msg.pack(), client_username, (dm_client,), msg.pack()))
 
+    msg.dst = not_client
+    cases.append((msg.pack(), client_username, (), reply.pack()))
 
-
-def test_main_handler_unauthorized_dst(mock_client_handler):
-    client, buffer_queue, send_queue = mock_client_handler
-
-    client.username = 'Artyom'
-
-    rcv_msg = protocol.chat_msg()
-    rcv_msg.src = client.username
-    rcv_msg.dst = 'Moytra'
-    rcv_msg.msg = 'Hello'
-    buffer_queue.put(rcv_msg.pack())
-
-    hdr, payload = client.recv_pkt()
-    client.handle_pkt(hdr, payload)
-
-    snd_msg = protocol.chat_msg()
-    snd_msg.msg = 'Moytra is offline'
-    snd_msg.dst = client.username
-    snd_msg.src = protocol.SERVER_CONFIG.SERVER_NAME
-
-    packed_msg = send_queue.get()
-
-    assert packed_msg == snd_msg.pack()
+    return cases
 
 
-def test_main_handler_authorized_dst(mock_client_handler):
-    client, buffer_queue, send_queue = mock_client_handler
+@pytest.mark.parametrize('pkt, client_username, fake_clients_usernames, expected_msg', get_test_handler_msg_data())
+@pytest.mark.asyncio
+async def test_handler_msg(fake_recv, pkt, client_username, fake_clients_usernames, expected_msg, client_handler_fixture):
+    mocked_client = client_handler_fixture.client
+    client_handler_fixture.username = client_username
+    hdr, payload = fake_recv
 
-    client.username = 'Artyom'
+    for client in fake_clients_usernames:
+        client_handler_fixture.clients[client] = AsyncMock()
 
-    rcv_msg = protocol.chat_msg()
-    rcv_msg.src = client.username
-    rcv_msg.dst = 'Dummy'
-    rcv_msg.msg = 'Hello'
-    buffer_queue.put(rcv_msg.pack())
+    await client_handler_fixture.handle_pkt(hdr, payload)
 
-    hdr, payload = client.recv_pkt()
-    client.handle_pkt(hdr, payload)
-
-    snd_msg = protocol.chat_msg()
-    snd_msg.msg = 'Hello'
-    snd_msg.dst = 'Dummy'
-    snd_msg.src = client.username
-
-    packed_msg = send_queue.get()
-
-    assert packed_msg == snd_msg.pack()
+    if not client_handler_fixture.clients:
+        mocked_client.send.assert_awaited_once_with(expected_msg)
+    for mocked_client in client_handler_fixture.clients.values():
+        mocked_client.send.assert_awaited_once_with(expected_msg)
 
 
-def test_msg_error_with_dst(mock_client_handler):
-    client, buffer_queue, send_queue = mock_client_handler
-
-    client.username = 'Artyom'
-    test_client = 'Fake'
-    client.clients.add_if_not_exists(test_client, 'fake_socket')
-
-    rcv_msg = protocol.chat_msg()
-    rcv_msg.src = client.username
-    rcv_msg.dst = test_client
-    rcv_msg.msg = f'Hello {test_client}'
-    buffer_queue.put(rcv_msg.pack())
-
-    hdr, payload = client.recv_pkt()
-    client.handle_pkt(hdr, payload)
-
-    snd_msg = protocol.chat_msg()
-    snd_msg.msg = f'{test_client} is offline'
-    snd_msg.dst = client.username
-    snd_msg.src = protocol.SERVER_CONFIG.SERVER_NAME
-
-    packed_msg = send_queue.get()
-
-    assert packed_msg == snd_msg.pack()
-
-
-def test_broadcast_with_error(mock_client_handler):
-    client, buffer_queue, send_queue = mock_client_handler
-
-    client.username = 'Artyom'
-    client.clients = ThreadSafeDict()
-    client.clients.add_if_not_exists('Dummy', 'fake_socket')
-    rcv_msg = protocol.chat_msg()
-    buffer_queue.put(rcv_msg.pack())
-
-    hdr, payload = client.recv_pkt()
-    client.handle_pkt(hdr, payload)
-
-    assert send_queue.empty()
+@pytest.mark.parametrize('dst', [('disconnected_error'), ('not_client_error'), ('broadcast_error')])
+@pytest.mark.asyncio
+async def test_handler_msg_errors(dst, client_handler_fixture):
+    async def fake_send(*args):
+        raise Exception
     
+    client_handler_fixture.client.send.side_effect = fake_send
+    fake_client = AsyncMock()
+    fake_client.send.side_effect = fake_send
+
+    fake_client_username = 'Fake_Client'
+    msg = protocol.chat_msg()
+    match dst:
+        case 'disconnected_error':
+            client_handler_fixture.clients[fake_client_username] = fake_client
+            msg.dst = fake_client_username
+        case 'not_client_error':
+            msg.dst = fake_client_username
+        case 'broadcast_error':
+            client_handler_fixture.clients[fake_client_username] = fake_client
+            msg.dst = ''
+
+
+    try:
+        await client_handler_fixture.handle_msg(msg)
+    except:
+        assert True

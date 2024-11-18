@@ -1,6 +1,8 @@
 import pytest
 import socket_chat.protocol as protocol
 import threading
+import asyncio
+import time
 
 
 def get_test_data():
@@ -9,24 +11,29 @@ def get_test_data():
 
 
 @pytest.mark.parametrize('input, cur_channel', get_test_data())
-def test_sender_channel_switch(mock_client, input, cur_channel):
+@pytest.mark.asyncio
+async def test_sender_channel_switch(mock_client, input, cur_channel):
     client, _, input_queue, _ = mock_client
 
     assert client.cur_channel == ''
+    await input_queue.put(input)
 
-    input_queue.put(input)
-    threading.Thread(target=client.sender, daemon=True).start()
-    client.server.is_active = False
+    try:
+        await asyncio.wait_for(client.sender(), 0.1)
+    except:
+        pass
 
     assert client.cur_channel == cur_channel
 
-
-def test_sender_channel_all_switch(mock_client):
+@pytest.mark.asyncio
+async def test_sender_channel_all_switch(mock_client):
     client, _, input_queue, _ = mock_client
 
     client.cur_channel = 'Artyom'
-    input_queue.put('/all')
-    threading.Thread(target=client.sender, daemon = True).start()
-    client.server.is_active = False
+    await input_queue.put('/all')
+    try:
+        await asyncio.wait_for(client.sender(), 0.1)
+    except:
+        pass
 
     assert client.cur_channel == ''
